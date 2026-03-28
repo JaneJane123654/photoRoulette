@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Фото Рулетка</string>
+    <string name="language_option">Язык</string>
+    <string name="language_auto">Системный по умолчанию</string>
+    <string name="language_change_action">Изменить</string>
+    <string name="language_name_arabic">Арабский</string>
+    <string name="language_name_english">Английский</string>
+    <string name="language_name_spanish">Испанский</string>
+    <string name="language_name_french">Французский</string>
+    <string name="language_name_russian">Русский</string>
+    <string name="language_name_chinese">Китайский</string>
+
+    <string name="home_header_title">Фото Рулетка</string>
+    <string name="home_header_description">Проведите влево или вправо, чтобы пропустить. Проведите вверх, чтобы удалить, если этот режим включён.</string>
+    <string name="refresh_button_content_description">Перемешать колоду фотографий заново</string>
+    <string name="refresh_button_label">Перемешать</string>
+
+    <string name="partial_access_icon_content_description">Включён частичный доступ к фото</string>
+    <string name="partial_access_title">Просмотр выбранной части</string>
+    <string name="partial_access_description">В этой колоде только фото, которыми сейчас делится Android. Расширьте доступ для более широкого перемешивания.</string>
+    <string name="partial_access_expand">Расширить</string>
+
+    <string name="loading_deck">Готовим вашу следующую случайную колоду...</string>
+    <string name="swipe_delete_title">Смахните вверх для удаления</string>
+    <string name="swipe_delete_enabled_description">Включено. Смахивание вверх по верхней карте попросит Android удалить это фото.</string>
+    <string name="swipe_delete_disabled_description">Отключено для более безопасного просмотра. Смахивание вверх работает как обычный пропуск.</string>
+
+    <string name="photo_content_description">Фото из вашей библиотеки</string>
+    <string name="photo_load_error_title">Не удалось загрузить это фото.</string>
+    <string name="photo_loading_title">Загрузка фото...</string>
+    <string name="photo_load_error_description">Можно продолжать смахивать, и колода перейдёт к следующему изображению.</string>
+    <string name="photo_loading_description">Coil загружает уменьшенную версию, чтобы смахивание оставалось плавным и экономным по памяти.</string>
+
+    <string name="permission_rationale_title">Перемешивайте галерею по-своему</string>
+    <string name="permission_rationale_description_primary">Фото Рулетка нужен доступ к фотографиям, чтобы собрать случайную колоду из вашей библиотеки. На Android 14 можно разрешить все фото для максимального перемешивания или открыть только выбранные фото и альбомы.</string>
+    <string name="permission_rationale_description_secondary">Любой выбор правильный. Приложение перемешивает и показывает только те фото, которые Android разрешает видеть, и ничего не покидает устройство.</string>
+    <string name="permission_feature_all_photos_icon_description">Опция всех фотографий</string>
+    <string name="permission_feature_all_photos_title">Лучшее случайное смешивание при полном доступе</string>
+    <string name="permission_feature_all_photos_body">Доступ ко всем фото открывает самый широкий диапазон случайных результатов по всей библиотеке.</string>
+    <string name="permission_feature_selected_icon_description">Опция выбранных фото и альбомов</string>
+    <string name="permission_feature_selected_title">Выбранные фото тоже подходят</string>
+    <string name="permission_feature_selected_body">Предпочитаете меньший набор? Android 14 может ограничить доступ только выбранными фото или альбомами, и Фото Рулетка будет работать в этих рамках.</string>
+    <string name="permission_feature_control_icon_description">Напоминание о контроле разрешений</string>
+    <string name="permission_feature_control_title">Вы сохраняете контроль</string>
+    <string name="permission_feature_control_body">Позже вы можете изменить это решение в системных настройках и расширить или сузить набор фото для перемешивания.</string>
+    <string name="permission_continue">Продолжить</string>
+    <string name="permission_maybe_later">Позже</string>
+    <string name="permission_illustration_collection_description">Карточка коллекции фото в иллюстрации разрешений</string>
+    <string name="permission_illustration_shuffle_description">Карточка перемешивания в иллюстрации разрешений</string>
+    <string name="permission_illustration_library_description">Выделенная карточка доступа к фото в иллюстрации разрешений</string>
+
+    <string name="empty_state_title">Вы всё просмотрели!</string>
+    <string name="empty_state_message">Сейчас больше нет фотографий для просмотра. Сделайте новые снимки и возвращайтесь за следующим раундом.</string>
+    <string name="permission_denied_title">Доступ к фото отключён</string>
+    <string name="permission_denied_message">Фото Рулетка нужен доступ к вашей библиотеке, чтобы собрать случайную колоду. Откройте системные настройки и разрешите доступ к фото для этого приложения.</string>
+    <string name="open_settings">Открыть настройки</string>
+
+    <string name="preview_photo_card">Фото-карта</string>
+</resources>

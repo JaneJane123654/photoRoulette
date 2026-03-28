@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">روليت الصور</string>
+    <string name="language_option">اللغة</string>
+    <string name="language_auto">افتراضي النظام</string>
+    <string name="language_change_action">تغيير</string>
+    <string name="language_name_arabic">العربية</string>
+    <string name="language_name_english">الإنجليزية</string>
+    <string name="language_name_spanish">الإسبانية</string>
+    <string name="language_name_french">الفرنسية</string>
+    <string name="language_name_russian">الروسية</string>
+    <string name="language_name_chinese">الصينية</string>
+
+    <string name="home_header_title">روليت الصور</string>
+    <string name="home_header_description">اسحب لليسار أو اليمين للتخطي. اسحب للأعلى للحذف عند تفعيل هذا الوضع.</string>
+    <string name="refresh_button_content_description">إعادة خلط مجموعة الصور</string>
+    <string name="refresh_button_label">إعادة خلط</string>
+
+    <string name="partial_access_icon_content_description">تم تفعيل وصول جزئي للصور</string>
+    <string name="partial_access_title">تصفح مجموعة محددة</string>
+    <string name="partial_access_description">تحتوي هذه المجموعة فقط على الصور التي يشاركها Android حالياً. وسّع الوصول إذا أردت خلطاً أوسع.</string>
+    <string name="partial_access_expand">توسيع</string>
+
+    <string name="loading_deck">جارٍ إعداد مجموعة عشوائية جديدة...</string>
+    <string name="swipe_delete_title">اسحب للأعلى للحذف</string>
+    <string name="swipe_delete_enabled_description">مُفعّل. السحب للأعلى على البطاقة العليا سيطلب من Android حذف هذه الصورة.</string>
+    <string name="swipe_delete_disabled_description">معطّل لتصفح أكثر أماناً. السحب للأعلى يعمل كتخطي عادي.</string>
+
+    <string name="photo_content_description">صورة من مكتبتك</string>
+    <string name="photo_load_error_title">تعذر تحميل هذه الصورة.</string>
+    <string name="photo_loading_title">جارٍ تحميل الصورة...</string>
+    <string name="photo_load_error_description">يمكنك متابعة السحب، وستنتقل المجموعة إلى الصورة التالية.</string>
+    <string name="photo_loading_description">يقوم Coil بجلب نسخة منخفضة الدقة للحفاظ على سلاسة السحب وأمان الذاكرة.</string>
+
+    <string name="permission_rationale_title">اخلط معرضك بالطريقة التي تريدها</string>
+    <string name="permission_rationale_description_primary">يحتاج روليت الصور إلى إذن الوصول للصور لبناء مجموعة عشوائية من مكتبتك. في Android 14 يمكنك السماح بكل الصور للحصول على أوسع خلط، أو مشاركة صور وألبومات محددة فقط.</string>
+    <string name="permission_rationale_description_secondary">أي اختيار تقوم به صحيح. التطبيق يخلط ويعرض فقط الصور التي يسمح Android برؤيتها، ولا يغادر أي شيء جهازك.</string>
+    <string name="permission_feature_all_photos_icon_description">خيار كل الصور</string>
+    <string name="permission_feature_all_photos_title">أفضل خلط عشوائي مع وصول كامل</string>
+    <string name="permission_feature_all_photos_body">السماح بكل الصور يفتح أوسع نطاق من المفاجآت عبر مكتبتك بالكامل.</string>
+    <string name="permission_feature_selected_icon_description">خيار الصور والألبومات المحددة</string>
+    <string name="permission_feature_selected_title">الصور المحددة تعمل أيضاً</string>
+    <string name="permission_feature_selected_body">تفضل مجموعة أصغر؟ يمكن لـ Android 14 تقييد الوصول إلى الصور أو الألبومات التي تختارها فقط، وسيبقى روليت الصور ضمن هذا الحد.</string>
+    <string name="permission_feature_control_icon_description">تذكير بالتحكم في الأذونات</string>
+    <string name="permission_feature_control_title">التحكم بيدك دائماً</string>
+    <string name="permission_feature_control_body">يمكنك مراجعة خيار الإذن لاحقاً من إعدادات النظام لتوسيع أو تضييق ما يمكن للتطبيق خلطه.</string>
+    <string name="permission_continue">متابعة</string>
+    <string name="permission_maybe_later">لاحقاً</string>
+    <string name="permission_illustration_collection_description">بطاقة مجموعة صور في توضيح الإذن</string>
+    <string name="permission_illustration_shuffle_description">بطاقة خلط في توضيح الإذن</string>
+    <string name="permission_illustration_library_description">بطاقة مميزة لوصول الصور في توضيح الإذن</string>
+
+    <string name="empty_state_title">انتهيت من التصفح!</string>
+    <string name="empty_state_message">لا توجد صور أخرى للتصفح حالياً. التقط بعض الصور الجديدة ثم عد لجولة أخرى.</string>
+    <string name="permission_denied_title">تم إيقاف الوصول إلى الصور</string>
+    <string name="permission_denied_message">يحتاج روليت الصور إلى الوصول إلى مكتبة الصور لبناء مجموعة الخلط. افتح إعدادات النظام للسماح للتطبيق بالوصول إلى الصور.</string>
+    <string name="open_settings">فتح الإعدادات</string>
+
+    <string name="preview_photo_card">بطاقة صورة</string>
+</resources>
