@@ -12,9 +12,23 @@
     <string name="language_name_chinese">中文</string>
 
     <string name="home_header_title">照片轮盘</string>
-    <string name="home_header_description">左右滑动可跳过。启用删除模式后，上滑可删除。</string>
+    <string name="home_header_description">支持单手手势随机浏览。点击下方“设置”即可自定义各项行为。</string>
     <string name="refresh_button_content_description">重新打乱照片卡组</string>
     <string name="refresh_button_label">重新打乱</string>
+    <string name="settings_entry_title">设置</string>
+    <string name="settings_entry_description">自定义手势、删除方式、图片展示与语言。</string>
+    <string name="settings_entry_open">打开</string>
+
+    <string name="default_behavior_title">默认操作说明</string>
+    <string name="default_behavior_line_up_next">上滑：下一张图片</string>
+    <string name="default_behavior_line_down_previous">下滑：上一张图片</string>
+    <string name="default_behavior_line_left_delete">左滑：删除图片</string>
+    <string name="default_behavior_line_delete_prerequisite">删除前提：必须先在设置里打开“启用删除操作”。如果没打开，所有删除手势会自动变成“下一张图片”。</string>
+    <string name="default_behavior_line_direct_delete">若不想弹出确认、希望直接删除，请在设置中开启“静默删除”。</string>
+    <string name="default_behavior_collapsed_hint">点按可展开默认操作说明</string>
+    <string name="default_behavior_expand">展开默认操作说明</string>
+    <string name="default_behavior_collapse">折叠默认操作说明</string>
+    <string name="default_behavior_close">关闭默认操作说明</string>
 
     <string name="partial_access_icon_content_description">已启用部分照片访问权限</string>
     <string name="partial_access_title">当前仅浏览已选范围</string>
@@ -22,9 +36,64 @@
     <string name="partial_access_expand">扩展</string>
 
     <string name="loading_deck">正在构建新的随机卡组...</string>
-    <string name="swipe_delete_title">上滑删除</string>
-    <string name="swipe_delete_enabled_description">已启用。对顶部卡片上滑会请求 Android 删除该照片。</string>
-    <string name="swipe_delete_disabled_description">已禁用以提高浏览安全性。上滑将按普通跳过处理。</string>
+    <string name="swipe_delete_title">启用删除操作</string>
+    <string name="swipe_delete_enabled_description">已启用。任何被配置为“删除”的滑动方向都会请求 Android 删除该照片。</string>
+    <string name="swipe_delete_disabled_description">已禁用以提高浏览安全性。配置为“删除”的方向会自动退化为“下一张图片”。</string>
+    <string name="show_full_image_title">卡片完整展示图片</string>
+    <string name="show_full_image_enabled_description">已开启。卡片会完整显示整张图片，可能出现留白。</string>
+    <string name="show_full_image_disabled_description">默认关闭。卡片保持当前裁剪铺满样式。</string>
+    <string name="floating_delete_button_title">悬浮删除按钮</string>
+    <string name="floating_delete_button_enabled_description">已开启。右下角显示红色小删除按钮，可拖动位置。</string>
+    <string name="floating_delete_button_disabled_description">默认关闭。不显示悬浮删除按钮。</string>
+    <string name="gesture_ball_title">手势悬浮球</string>
+    <string name="gesture_ball_enabled_description">已开启。从中心滑向彩色环会预览动作，松手后才执行。按住中心即可拖动位置。</string>
+    <string name="gesture_ball_disabled_description">默认关闭，仅使用常规滑动卡片操作。</string>
+    <string name="gesture_ball_size_label">悬浮球大小：%1$d%%</string>
+    <string name="gesture_ball_preview_execute">松手后执行：%1$s</string>
+    <string name="gesture_ball_preview_unavailable">当前无法执行：%1$s</string>
+    <string name="silent_delete_title">静默删除</string>
+    <string name="silent_delete_enabled_description">已为 %1$s 启用。用户滑动触发删除后，授权目录内的照片会直接静默删除；目录外照片仍会走 Android 确认。</string>
+    <string name="silent_delete_pending_description">已开启，但关键目录尚未全部授权。请同时授权 DCIM 和 Pictures，以覆盖相机与截图的静默删除场景。</string>
+    <string name="silent_delete_directory_ready_description">当前已授权目录：%1$s。开启“静默删除”后，这个目录内的滑动删除才会跳过系统确认。</string>
+    <string name="silent_delete_disabled_description">当前关闭。滑动删除仍会使用 Android 确认。只有你手动开启此选项并授权目录后，才会启用静默删除。</string>
+    <string name="silent_delete_select_directory">授权目录</string>
+    <string name="silent_delete_change_directory">更换授权目录</string>
+    <string name="silent_delete_scope_dcim">DCIM</string>
+    <string name="silent_delete_scope_pictures">Pictures</string>
+    <string name="silent_delete_scope_ready_description">已授权：%1$s</string>
+    <string name="silent_delete_scope_missing_description">尚未授权</string>
+    <string name="swipe_behavior_title">滑动行为</string>
+    <string name="swipe_behavior_description">为每个滑动方向选择对应操作。</string>
+    <string name="swipe_direction_left">左滑</string>
+    <string name="swipe_direction_right">右滑</string>
+    <string name="swipe_direction_up">上滑</string>
+    <string name="swipe_direction_down">下滑</string>
+    <string name="swipe_action_skip">跳过 / 不执行</string>
+    <string name="swipe_action_delete">删除</string>
+    <string name="swipe_action_previous">上一张图片</string>
+    <string name="swipe_action_next">下一张图片</string>
+
+    <string name="settings_dialog_title">设置</string>
+    <string name="settings_dialog_done">完成</string>
+    <string name="settings_section_guide">使用说明</string>
+    <string name="settings_section_display">显示</string>
+    <string name="settings_section_swipe">手势</string>
+    <string name="settings_section_delete">删除</string>
+    <string name="settings_section_language">语言</string>
+
+    <string name="usage_guide_title">快速上手</string>
+    <string name="usage_guide_line_one">1）浏览：按你配置的方向滑动卡片；开启手势悬浮球后也可通过悬浮球执行动作。</string>
+    <string name="usage_guide_line_two">2）删除：必须先开启“启用删除操作”。未开启时，所有删除动作会自动变成“下一张图片”。</string>
+    <string name="usage_guide_line_three">3）静默删除：开启后请分别授权 DCIM 与 Pictures 父目录，以覆盖更多截图与相机路径。</string>
+    <string name="usage_guide_line_four">4）若偶发卡顿，先点一次“重新打乱”重建卡组，再继续滑动。</string>
+
+    <string name="silent_delete_guide_title">开启流畅删除</string>
+    <string name="silent_delete_guide_description_dcim">接下来会打开 Android 文件夹授权页，并定位到 DCIM 父目录（覆盖 Camera 及常见截图路径）。</string>
+    <string name="silent_delete_guide_description_pictures">接下来会打开 Android 文件夹授权页，并定位到 Pictures 父目录（覆盖常见截图目录）。</string>
+    <string name="silent_delete_guide_hint_dcim">请点击底部“使用此文件夹”，授权整个 DCIM。</string>
+    <string name="silent_delete_guide_hint_pictures">请点击底部“使用此文件夹”，授权整个 Pictures。</string>
+    <string name="silent_delete_guide_cancel">稍后再说</string>
+    <string name="silent_delete_guide_continue">立即打开</string>
 
     <string name="photo_content_description">来自你的图库的照片</string>
     <string name="photo_load_error_title">这张照片无法加载。</string>

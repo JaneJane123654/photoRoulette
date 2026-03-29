@@ -1,5 +1,6 @@
 package com.example.photoroulette.data.media
 
+import android.content.ContentUris
 import android.content.Context
 import android.net.Uri
 import android.provider.MediaStore
@@ -30,6 +31,35 @@ class MediaRepository(
         }
 
         buildSmartShuffle(mediaEntries)
+    }
+
+    suspend fun getSilentDeleteEntry(imageId: Long): SilentDeleteEntry? = withContext(ioDispatcher) {
+        contentResolver.query(
+            ContentUris.withAppendedId(observeUri, imageId),
+            SILENT_DELETE_PROJECTION,
+            null,
+            null,
+            null,
+        )?.use { cursor ->
+            if (!cursor.moveToFirst()) {
+                return@withContext null
+            }
+
+            val displayNameColumnIndex = cursor.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME)
+            if (displayNameColumnIndex < 0 || cursor.isNull(displayNameColumnIndex)) {
+                return@withContext null
+            }
+
+            val relativePathColumnIndex = cursor.getColumnIndex(MediaStore.MediaColumns.RELATIVE_PATH)
+            SilentDeleteEntry(
+                displayName = cursor.getString(displayNameColumnIndex),
+                relativePath = if (relativePathColumnIndex >= 0 && !cursor.isNull(relativePathColumnIndex)) {
+                    cursor.getString(relativePathColumnIndex)
+                } else {
+                    null
+                },
+            )
+        }
     }
 
     private fun queryMediaEntries(): List<MediaEntry> {
@@ -145,6 +175,11 @@ class MediaRepository(
         val dateAddedSeconds: Long,
     )
 
+    data class SilentDeleteEntry(
+        val displayName: String,
+        val relativePath: String?,
+    )
+
     private data class Bucket(
         val key: Int,
         val ids: MutableList<Long>,
@@ -154,6 +189,10 @@ class MediaRepository(
         val PROJECTION = arrayOf(
             MediaStore.Images.Media._ID,
             MediaStore.Images.Media.DATE_ADDED,
+        )
+        val SILENT_DELETE_PROJECTION = arrayOf(
+            MediaStore.MediaColumns.DISPLAY_NAME,
+            MediaStore.MediaColumns.RELATIVE_PATH,
         )
 
         const val MILLIS_PER_SECOND = 1_000L

@@ -1,13 +1,17 @@
 package com.example.photoroulette.utils
 
+import android.annotation.SuppressLint
 import android.app.RecoverableSecurityException
 import android.content.ActivityNotFoundException
 import android.content.ContentResolver
 import android.content.ContentUris
+import android.content.Context
 import android.net.Uri
 import android.os.Build
+import android.provider.DocumentsContract
 import android.provider.MediaStore
 import androidx.activity.result.IntentSenderRequest
+import androidx.documentfile.provider.DocumentFile
 
 object IntentHelper {
 
@@ -16,6 +20,12 @@ object IntentHelper {
         data class LaunchRequest(val request: IntentSenderRequest) : DeleteRequestResult
         data class Failed(val throwable: Throwable? = null) : DeleteRequestResult
     }
+
+    data class SilentDeleteRequest(
+        val treeUri: Uri,
+        val displayName: String,
+        val relativePath: String?,
+    )
 
     fun buildImageUri(
         imageId: Long,
@@ -44,6 +54,7 @@ object IntentHelper {
         sdkInt = sdkInt,
     )
 
+    @SuppressLint("NewApi")
     fun prepareDelete(
         contentResolver: ContentResolver,
         imageUri: Uri,
@@ -96,6 +107,28 @@ object IntentHelper {
     }
 
     fun prepareDelete(
+        context: Context,
+        contentResolver: ContentResolver,
+        imageId: Long,
+        silentDeleteRequest: SilentDeleteRequest?,
+        sdkInt: Int = Build.VERSION.SDK_INT,
+        collectionUri: Uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+    ): DeleteRequestResult {
+        if (silentDeleteRequest != null) {
+            when (trySilentDelete(context, silentDeleteRequest)) {
+                SilentDeleteOutcome.Deleted -> return DeleteRequestResult.Deleted
+                SilentDeleteOutcome.NotAvailable -> Unit
+            }
+        }
+
+        return prepareDelete(
+            contentResolver = contentResolver,
+            imageUri = buildImageUri(imageId, collectionUri),
+            sdkInt = sdkInt,
+        )
+    }
+
+    fun prepareDelete(
         contentResolver: ContentResolver,
         imageId: Long,
         sdkInt: Int = Build.VERSION.SDK_INT,
@@ -105,4 +138,81 @@ object IntentHelper {
         imageUri = buildImageUri(imageId, collectionUri),
         sdkInt = sdkInt,
     )
+
+    internal fun buildRelativePathSegments(
+        treeDocumentId: String,
+        mediaRelativePath: String?,
+    ): List<String>? {
+        val normalizedMediaPath = normalizeDirectoryPath(mediaRelativePath) ?: return null
+        val treePath = normalizeDirectoryPath(treeDocumentId.substringAfter(':', ""))
+
+        if (treePath.isNullOrEmpty()) {
+            return normalizedMediaPath.split('/').filter { it.isNotBlank() }
+        }
+
+        if (normalizedMediaPath.equals(treePath, ignoreCase = true)) {
+            return emptyList()
+        }
+
+        val treePrefix = "$treePath/"
+        if (!normalizedMediaPath.startsWith(treePrefix, ignoreCase = true)) {
+            return null
+        }
+
+        return normalizedMediaPath
+            .substring(treePrefix.length)
+            .split('/')
+            .filter { it.isNotBlank() }
+    }
+
+    internal fun normalizeDirectoryPath(path: String?): String? {
+        val normalized = path
+            ?.replace('\\', '/')
+            ?.trim()
+            ?.trim('/')
+            .orEmpty()
+
+        return normalized.ifBlank { null }
+    }
+
+    private fun trySilentDelete(
+        context: Context,
+        request: SilentDeleteRequest,
+    ): SilentDeleteOutcome {
+        val treeDocumentId = runCatching {
+            DocumentsContract.getTreeDocumentId(request.treeUri)
+        }.getOrNull() ?: return SilentDeleteOutcome.NotAvailable
+
+        val relativeSegments = buildRelativePathSegments(
+            treeDocumentId = treeDocumentId,
+            mediaRelativePath = request.relativePath,
+        ) ?: return SilentDeleteOutcome.NotAvailable
+
+        val rootDirectory = DocumentFile.fromTreeUri(context, request.treeUri)
+            ?: return SilentDeleteOutcome.NotAvailable
+
+        var targetDirectory: DocumentFile? = rootDirectory
+        relativeSegments.forEach { segment ->
+            targetDirectory = targetDirectory
+                ?.findFile(segment)
+                ?.takeIf { it.isDirectory }
+        }
+
+        val resolvedTargetDirectory = targetDirectory ?: return SilentDeleteOutcome.NotAvailable
+
+        val targetFile = resolvedTargetDirectory.findFile(request.displayName)
+            ?.takeIf { it.exists() && it.isFile }
+            ?: return SilentDeleteOutcome.NotAvailable
+
+        return if (targetFile.delete()) {
+            SilentDeleteOutcome.Deleted
+        } else {
+            SilentDeleteOutcome.NotAvailable
+        }
+    }
+
+    private enum class SilentDeleteOutcome {
+        Deleted,
+        NotAvailable,
+    }
 }

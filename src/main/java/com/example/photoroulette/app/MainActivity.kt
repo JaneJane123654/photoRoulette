@@ -3,7 +3,9 @@ package com.example.photoroulette.app
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.provider.DocumentsContract
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -11,8 +13,30 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.Typography
@@ -21,12 +45,20 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.photoroulette.R
+import com.example.photoroulette.model.SilentDeleteScope
 import com.example.photoroulette.ui.screens.MainScreen
 import com.example.photoroulette.utils.AppLanguageManager
 import com.example.photoroulette.utils.PermissionHelper
@@ -40,6 +72,8 @@ class MainActivity : ComponentActivity() {
     private var hasAttemptedPermissionRequest by mutableStateOf(false)
     private var dismissPermissionRationale by mutableStateOf(false)
     private var shouldShowPermissionRationale by mutableStateOf(false)
+    private var isSilentDeleteGuideVisible by mutableStateOf(false)
+    private var pendingSilentDeleteScope: SilentDeleteScope? by mutableStateOf(null)
 
     private val requestPermissionsLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
@@ -56,6 +90,31 @@ class MainActivity : ComponentActivity() {
         } else {
             viewModel.onSystemDeleteCancelled()
         }
+    }
+
+    private val directoryAccessLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        val requestScope = pendingSilentDeleteScope
+        pendingSilentDeleteScope = null
+        val treeUri = result.data?.data
+        if (result.resultCode != Activity.RESULT_OK || treeUri == null) {
+            viewModel.onSilentDeleteDirectoryRequestCancelled(requestScope)
+            return@registerForActivityResult
+        }
+
+        val grantedFlags = result.data?.flags?.and(
+            Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+        ) ?: 0
+
+        if (grantedFlags == 0) {
+            viewModel.onSilentDeleteDirectoryRequestCancelled(requestScope)
+            return@registerForActivityResult
+        }
+
+        contentResolver.takePersistableUriPermission(treeUri, grantedFlags)
+        val scope = requestScope ?: SilentDeleteScope.Dcim
+        viewModel.onSilentDeleteDirectoryGranted(scope, treeUri)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -90,6 +149,13 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                LaunchedEffect(viewModel) {
+                    viewModel.silentDeleteDirectoryRequests.collectLatest { scope ->
+                        pendingSilentDeleteScope = scope
+                        isSilentDeleteGuideVisible = true
+                    }
+                }
+
                 LaunchedEffect(appLanguageTag) {
                     AppLanguageManager.applyLanguage(appLanguageTag)
                 }
@@ -115,6 +181,24 @@ class MainActivity : ComponentActivity() {
                         dismissPermissionRationale = true
                     },
                 )
+
+                if (isSilentDeleteGuideVisible) {
+                    SilentDeleteGuideDialog(
+                        scope = pendingSilentDeleteScope ?: SilentDeleteScope.Dcim,
+                        onDismiss = {
+                            isSilentDeleteGuideVisible = false
+                            val dismissedScope = pendingSilentDeleteScope
+                            pendingSilentDeleteScope = null
+                            viewModel.onSilentDeleteDirectoryRequestCancelled(dismissedScope)
+                        },
+                        onContinue = {
+                            val targetScope = pendingSilentDeleteScope ?: SilentDeleteScope.Dcim
+                            pendingSilentDeleteScope = targetScope
+                            isSilentDeleteGuideVisible = false
+                            launchDirectoryAccessRequest(targetScope)
+                        },
+                    )
+                }
             }
         }
     }
@@ -154,6 +238,25 @@ class MainActivity : ComponentActivity() {
         startActivity(settingsIntent)
     }
 
+    private fun launchDirectoryAccessRequest(scope: SilentDeleteScope) {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+            addFlags(
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
+                    Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION or
+                    Intent.FLAG_GRANT_PREFIX_URI_PERMISSION,
+            )
+
+            val parsedInitialTreeUri = buildInitialUriForScope(scope)
+
+            if (parsedInitialTreeUri != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                putExtra(DocumentsContract.EXTRA_INITIAL_URI, parsedInitialTreeUri)
+            }
+        }
+
+        directoryAccessLauncher.launch(intent)
+    }
+
     private fun syncPermissionState() {
         val permissionMode = PermissionHelper.checkCurrentPermissionMode(this)
         shouldShowPermissionRationale = PermissionHelper.shouldShowRequestPermissionRationale(this)
@@ -165,9 +268,132 @@ class MainActivity : ComponentActivity() {
         viewModel.onPermissionModeChanged(permissionMode)
     }
 
+    private fun buildInitialUriForScope(scope: SilentDeleteScope): Uri? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            return null
+        }
+
+        return when (scope) {
+            SilentDeleteScope.Dcim -> {
+                Uri.parse("content://com.android.externalstorage.documents/document/primary%3ADCIM")
+            }
+            SilentDeleteScope.Pictures -> {
+                Uri.parse("content://com.android.externalstorage.documents/document/primary%3APictures")
+            }
+        }
+    }
+
     private companion object {
         const val KEY_PERMISSION_REQUESTED = "permission_requested"
         const val KEY_RATIONALE_DISMISSED = "rationale_dismissed"
+    }
+}
+
+@Composable
+private fun SilentDeleteGuideDialog(
+    scope: SilentDeleteScope,
+    onDismiss: () -> Unit,
+    onContinue: () -> Unit,
+) {
+    val transition = rememberInfiniteTransition(label = "silent-delete-guide")
+    val pulseScale by transition.animateFloat(
+        initialValue = 0.92f,
+        targetValue = 1.08f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1100, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "silent-delete-guide-pulse",
+    )
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.surface,
+                            MaterialTheme.colorScheme.surfaceContainerLow,
+                        ),
+                    ),
+                ),
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 3.dp,
+            shadowElevation = 12.dp,
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 18.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    Surface(
+                        modifier = Modifier.scale(pulseScale),
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                    ) {
+                        Box(
+                            modifier = Modifier.padding(12.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            androidx.compose.material3.Icon(
+                                imageVector = Icons.Outlined.FolderOpen,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(26.dp),
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = androidx.compose.ui.res.stringResource(id = R.string.silent_delete_guide_title),
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+
+                Text(
+                    text = androidx.compose.ui.res.stringResource(
+                        id = when (scope) {
+                            SilentDeleteScope.Dcim -> R.string.silent_delete_guide_description_dcim
+                            SilentDeleteScope.Pictures -> R.string.silent_delete_guide_description_pictures
+                        },
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                Text(
+                    text = androidx.compose.ui.res.stringResource(
+                        id = when (scope) {
+                            SilentDeleteScope.Dcim -> R.string.silent_delete_guide_hint_dcim
+                            SilentDeleteScope.Pictures -> R.string.silent_delete_guide_hint_pictures
+                        },
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End),
+                ) {
+                    OutlinedButton(onClick = onDismiss) {
+                        Text(text = androidx.compose.ui.res.stringResource(id = R.string.silent_delete_guide_cancel))
+                    }
+                    Button(onClick = onContinue) {
+                        Text(text = androidx.compose.ui.res.stringResource(id = R.string.silent_delete_guide_continue))
+                    }
+                }
+            }
+        }
     }
 }
 
