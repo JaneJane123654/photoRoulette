@@ -26,6 +26,99 @@
     <string name="swipe_delete_enabled_description">مُفعّل. السحب للأعلى على البطاقة العليا سيطلب من Android حذف هذه الصورة.</string>
     <string name="swipe_delete_disabled_description">معطّل لتصفح أكثر أماناً. السحب للأعلى يعمل كتخطي عادي.</string>
 
+    <string name="default_behavior_title">إرشادات الإجراءات الافتراضية</string>
+    <string name="default_behavior_line_up_next">سحب للأعلى: الصورة التالية</string>
+    <string name="default_behavior_line_down_previous">سحب للأسفل: الصورة السابقة</string>
+    <string name="default_behavior_line_left_delete">سحب لليسار: حذف الصورة</string>
+    <string name="default_behavior_line_delete_prerequisite">الحذف يتطلب تفعيل "تفعيل إجراء الحذف" من الإعدادات. إذا كان مغلقاً، تتحول كل حركات الحذف إلى الانتقال للصورة التالية.</string>
+    <string name="default_behavior_line_direct_delete">تريد الحذف المباشر دون تأكيد Android؟ فعّل الحذف الصامت من الإعدادات.</string>
+    <string name="default_behavior_line_visibility_rule">ملاحظة: يتم إخفاء هذا اللوح تلقائياً بعد ظهوره 5 مرات خلال شهر واحد، ويُعاد تفعيله تلقائياً في الشهر التالي. إذا أوقفته يدوياً من الإعدادات، سيبقى متوقفاً في الشهر التالي أيضاً.</string>
+    <string name="default_behavior_collapsed_hint">اضغط لتوسيع الإرشادات الافتراضية</string>
+    <string name="default_behavior_expand">توسيع الإرشادات الافتراضية</string>
+    <string name="default_behavior_collapse">طي الإرشادات الافتراضية</string>
+    <string name="default_behavior_close">إخفاء الإرشادات الافتراضية</string>
+
+    <string name="show_full_image_title">عرض الصورة كاملة داخل البطاقة</string>
+    <string name="show_full_image_enabled_description">مُفعّل. تعرض البطاقات الصورة كاملة، وقد تظهر هوامش فارغة عند الحاجة.</string>
+    <string name="show_full_image_disabled_description">معطّل (افتراضي). تستخدم البطاقات قصاً لملء المساحة.</string>
+    <string name="floating_delete_button_title">زر حذف عائم</string>
+    <string name="floating_delete_button_enabled_description">مُفعّل. يظهر زر حذف أحمر صغير أسفل اليمين ويمكن سحبه بعد ضغط مطوّل.</string>
+    <string name="floating_delete_button_disabled_description">معطّل افتراضياً. لا يظهر زر حذف عائم.</string>
+    <string name="gesture_ball_title">كرة الإيماءات العائمة</string>
+    <string name="gesture_ball_enabled_description">مُفعّل. اسحب من المركز نحو الحلقة الملوّنة لمعاينة الإجراء ثم أفلت للتنفيذ. اضغط مطوّلاً على المركز لتحريكها.</string>
+    <string name="gesture_ball_disabled_description">معطّلة افتراضياً. استخدم سحب البطاقات العادي فقط.</string>
+    <string name="gesture_ball_size_label">حجم الكرة: %1$d%%</string>
+    <string name="gesture_ball_preview_execute">أفلت للتنفيذ: %1$s</string>
+    <string name="gesture_ball_preview_unavailable">غير متاح الآن: %1$s</string>
+
+    <string name="silent_delete_title">الحذف الصامت</string>
+    <string name="silent_delete_enabled_description">مُفعّل لـ %1$s. الصور داخل هذا المجلد المصرّح تُحذف مباشرة دون تأكيد. خارج المجلد يستمر تأكيد Android.</string>
+    <string name="silent_delete_pending_description">مُفعّل، لكن المجلدات المطلوبة لم تُصرّح بالكامل بعد. صرّح DCIM وPictures لتغطية الكاميرا ولقطات الشاشة.</string>
+    <string name="silent_delete_directory_ready_description">المجلد المصرّح: %1$s. فعّل الحذف الصامت لتجاوز التأكيد داخل هذا المجلد.</string>
+    <string name="silent_delete_disabled_description">معطّل. الحذف بالسحب ما زال يستخدم تأكيد Android. يعمل الحذف الصامت فقط بعد تفعيل هذا الخيار ومنح تصريح لمجلد.</string>
+    <string name="silent_delete_select_directory">تصريح مجلد</string>
+    <string name="silent_delete_change_directory">تغيير المجلد المصرّح</string>
+    <string name="silent_delete_scope_dcim">DCIM</string>
+    <string name="silent_delete_scope_pictures">Pictures</string>
+    <string name="silent_delete_scope_ready_description">تم التصريح: %1$s</string>
+    <string name="silent_delete_scope_missing_description">غير مصرّح بعد</string>
+
+    <string name="swipe_behavior_title">سلوك السحب</string>
+    <string name="swipe_behavior_description">اختر الإجراء لكل اتجاه سحب.</string>
+    <string name="swipe_direction_left">سحب لليسار</string>
+    <string name="swipe_direction_right">سحب لليمين</string>
+    <string name="swipe_direction_up">سحب للأعلى</string>
+    <string name="swipe_direction_down">سحب للأسفل</string>
+    <string name="swipe_action_skip">تخطي / بدون إجراء</string>
+    <string name="swipe_action_delete">حذف</string>
+    <string name="swipe_action_previous">الصورة السابقة</string>
+    <string name="swipe_action_next">الصورة التالية</string>
+
+    <string name="settings_entry_title">الإعدادات</string>
+    <string name="settings_entry_description">خصّص الإيماءات، الحذف، العرض واللغة.</string>
+    <string name="settings_entry_open">فتح</string>
+    <string name="settings_dialog_title">الإعدادات</string>
+    <string name="settings_dialog_done">تم</string>
+    <string name="settings_section_guide">الدليل</string>
+    <string name="settings_section_display">العرض</string>
+    <string name="settings_section_swipe">الإيماءات</string>
+    <string name="settings_section_delete">الحذف</string>
+    <string name="settings_section_language">اللغة</string>
+    <string name="settings_section_update">التحديث</string>
+
+    <string name="usage_guide_title">طريقة الاستخدام بسرعة</string>
+    <string name="usage_guide_line_one">1) الخلط: اسحب البطاقات حسب إعداداتك، أو استخدم كرة الإيماءات عند تفعيلها.</string>
+    <string name="usage_guide_line_two">2) الحذف: فعّل أولاً "تفعيل إجراء الحذف". بدونه تتحول كل إجراءات الحذف إلى الصورة التالية.</string>
+    <string name="usage_guide_line_three">3) الحذف الصامت: فعّله ثم صرّح DCIM وPictures. نفتح المجلد الأب مباشرة لتسريع الإعداد.</string>
+    <string name="usage_guide_line_four">4) إذا بدا تحرّك البطاقات غير سلس، اضغط "إعادة خلط" مرة واحدة لإعادة بناء المجموعة.</string>
+    <string name="usage_guide_line_five">5) لوحة الإجراءات الافتراضية: إذا ظهرت 5 مرات خلال شهر واحد، تُغلق تلقائياً لباقي الشهر وتعود تلقائياً في الشهر التالي. إذا أغلقتها أنت يدوياً، فستبقى مغلقة في الشهر التالي أيضاً.</string>
+
+    <string name="default_behavior_visibility_title">عرض لوحة الإجراءات الافتراضية</string>
+    <string name="default_behavior_visibility_visible_description">مُفعّل. يمكن أن تظهر اللوحة عند فتح التطبيق. تُغلق تلقائياً بعد 5 مرات ظهور خلال شهر.</string>
+    <string name="default_behavior_visibility_auto_hidden_description">مخفية مؤقتاً هذا الشهر بعد 5 مرات ظهور. ستُفعّل تلقائياً الشهر القادم.</string>
+    <string name="default_behavior_visibility_user_hidden_description">أنت أوقفتها يدوياً. ستبقى مغلقة في الشهر القادم حتى تعيد تشغيلها.</string>
+
+    <string name="update_controls_title">تحديث التطبيق</string>
+    <string name="update_controls_description">الإصدار الحالي: %1$s</string>
+    <string name="update_controls_check_button">التحقق من التحديثات</string>
+    <string name="update_dialog_title">إصدار جديد متاح</string>
+    <string name="update_dialog_message">يوجد إصدار أحدث (%1$s). إصدارك الحالي هو %2$s.</string>
+    <string name="update_dialog_not_now">ليس الآن</string>
+    <string name="update_dialog_later">ذكّرني عند إصدار أحدث</string>
+    <string name="update_dialog_update_now">تحديث الآن</string>
+    <string name="update_status_title">نتيجة التحقق من التحديث</string>
+    <string name="update_status_latest">أنت تستخدم أحدث إصدار بالفعل.</string>
+    <string name="update_status_deferred">اخترت تجاهل الإصدار %1$s. لن يظهر التنبيه مجدداً إلا عند توفر إصدار أعلى.</string>
+    <string name="update_status_failed">تعذر التحقق من التحديث أو تثبيته. حاول مرة أخرى لاحقاً.</string>
+
+    <string name="silent_delete_guide_title">تفعيل حذف سلس</string>
+    <string name="silent_delete_guide_description_dcim">بعد ذلك سيفتح Android صفحة تصريح المجلد مع التوجيه مباشرة إلى المجلد الأب DCIM (يشمل Camera ومسارات لقطات شاشة كثيرة).</string>
+    <string name="silent_delete_guide_description_pictures">بعد ذلك سيفتح Android صفحة تصريح المجلد مع التوجيه مباشرة إلى المجلد الأب Pictures (يغطي كثيراً من مجلدات لقطات الشاشة).</string>
+    <string name="silent_delete_guide_hint_dcim">اضغط "استخدام هذا المجلد" لمنح صلاحية مكتبة DCIM بالكامل.</string>
+    <string name="silent_delete_guide_hint_pictures">اضغط "استخدام هذا المجلد" لمنح صلاحية مكتبة Pictures بالكامل.</string>
+    <string name="silent_delete_guide_cancel">ليس الآن</string>
+    <string name="silent_delete_guide_continue">فتح الآن</string>
+
     <string name="photo_content_description">صورة من مكتبتك</string>
     <string name="photo_load_error_title">تعذر تحميل هذه الصورة.</string>
     <string name="photo_loading_title">جارٍ تحميل الصورة...</string>

@@ -7,9 +7,11 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.photoroulette.model.DefaultBehaviorNoticeMode
 import com.example.photoroulette.model.SwipeAction
 import java.io.IOException
 import kotlinx.coroutines.flow.Flow
@@ -37,6 +39,10 @@ class SettingsRepository(
         val SwipeRightAction = stringPreferencesKey("swipe_right_action")
         val SwipeUpAction = stringPreferencesKey("swipe_up_action")
         val SwipeDownAction = stringPreferencesKey("swipe_down_action")
+        val DefaultBehaviorNoticeMode = stringPreferencesKey("default_behavior_notice_mode")
+        val DefaultBehaviorNoticeShownMonth = stringPreferencesKey("default_behavior_notice_shown_month")
+        val DefaultBehaviorNoticeShownCount = intPreferencesKey("default_behavior_notice_shown_count")
+        val DeferredUpdateVersion = stringPreferencesKey("deferred_update_version")
     }
 
     val isSwipeDeleteEnabled: Flow<Boolean> = appContext.dataStore.data
@@ -198,6 +204,31 @@ class SettingsRepository(
             SwipeAction.fromStorageValue(preferences[Keys.SwipeDownAction]) ?: DEFAULT_DOWN_ACTION
         }
 
+    val defaultBehaviorNoticeMode: Flow<DefaultBehaviorNoticeMode> = appContext.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            DefaultBehaviorNoticeMode.fromStorageValue(preferences[Keys.DefaultBehaviorNoticeMode])
+                ?: DefaultBehaviorNoticeMode.Visible
+        }
+
+    val skippedUpdateVersion: Flow<String?> = appContext.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[Keys.DeferredUpdateVersion]?.takeIf { version -> version.isNotBlank() }
+        }
+
     suspend fun setSwipeDeleteEnabled(enabled: Boolean) {
         appContext.dataStore.edit { preferences ->
             preferences[Keys.EnableSwipeDelete] = enabled
@@ -287,6 +318,77 @@ class SettingsRepository(
     suspend fun setSwipeDownAction(action: SwipeAction) {
         appContext.dataStore.edit { preferences ->
             preferences[Keys.SwipeDownAction] = action.storageValue
+        }
+    }
+
+    suspend fun setDefaultBehaviorNoticeEnabled(enabled: Boolean) {
+        val mode = if (enabled) {
+            DefaultBehaviorNoticeMode.Visible
+        } else {
+            DefaultBehaviorNoticeMode.UserHidden
+        }
+
+        appContext.dataStore.edit { preferences ->
+            preferences[Keys.DefaultBehaviorNoticeMode] = mode.storageValue
+            if (enabled) {
+                preferences[Keys.DefaultBehaviorNoticeShownCount] = 0
+            }
+        }
+    }
+
+    suspend fun prepareDefaultBehaviorNoticeForSession(
+        currentMonthKey: String,
+        monthlyDisplayLimit: Int,
+    ): Boolean {
+        require(monthlyDisplayLimit > 0) {
+            "monthlyDisplayLimit must be greater than zero."
+        }
+
+        var shouldShowNotice = false
+
+        appContext.dataStore.edit { preferences ->
+            var mode = DefaultBehaviorNoticeMode.fromStorageValue(
+                preferences[Keys.DefaultBehaviorNoticeMode],
+            ) ?: DefaultBehaviorNoticeMode.Visible
+
+            var shownMonth = preferences[Keys.DefaultBehaviorNoticeShownMonth] ?: currentMonthKey
+            var shownCount = (preferences[Keys.DefaultBehaviorNoticeShownCount] ?: 0).coerceAtLeast(0)
+
+            if (shownMonth != currentMonthKey) {
+                shownMonth = currentMonthKey
+                shownCount = 0
+
+                if (mode == DefaultBehaviorNoticeMode.AutoHidden) {
+                    mode = DefaultBehaviorNoticeMode.Visible
+                }
+            }
+
+            if (mode == DefaultBehaviorNoticeMode.Visible) {
+                if (shownCount >= monthlyDisplayLimit) {
+                    mode = DefaultBehaviorNoticeMode.AutoHidden
+                    shouldShowNotice = false
+                } else {
+                    shownCount += 1
+                    shouldShowNotice = true
+                }
+            }
+
+            preferences[Keys.DefaultBehaviorNoticeMode] = mode.storageValue
+            preferences[Keys.DefaultBehaviorNoticeShownMonth] = shownMonth
+            preferences[Keys.DefaultBehaviorNoticeShownCount] = shownCount
+        }
+
+        return shouldShowNotice
+    }
+
+    suspend fun setSkippedUpdateVersion(versionName: String?) {
+        appContext.dataStore.edit { preferences ->
+            val normalizedVersion = versionName?.trim().orEmpty()
+            if (normalizedVersion.isBlank()) {
+                preferences.remove(Keys.DeferredUpdateVersion)
+            } else {
+                preferences[Keys.DeferredUpdateVersion] = normalizedVersion
+            }
         }
     }
 

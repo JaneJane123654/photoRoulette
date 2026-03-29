@@ -48,6 +48,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -87,9 +88,13 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.photoroulette.R
+import com.example.photoroulette.BuildConfig
 import com.example.photoroulette.data.datastore.SettingsRepository
+import com.example.photoroulette.model.AppReleaseInfo
+import com.example.photoroulette.model.DefaultBehaviorNoticeMode
 import com.example.photoroulette.model.SilentDeleteScope
 import com.example.photoroulette.model.SwipeAction
+import com.example.photoroulette.model.UpdateCheckFeedback
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.photoroulette.ui.components.EmptyGalleryScreen
@@ -128,6 +133,11 @@ fun MainScreen(
     val swipeRightAction by viewModel.swipeRightAction.collectAsStateWithLifecycle()
     val swipeUpAction by viewModel.swipeUpAction.collectAsStateWithLifecycle()
     val swipeDownAction by viewModel.swipeDownAction.collectAsStateWithLifecycle()
+    val defaultBehaviorNoticeMode by viewModel.defaultBehaviorNoticeMode.collectAsStateWithLifecycle()
+    val shouldShowDefaultBehaviorNotice by viewModel.shouldShowDefaultBehaviorNotice.collectAsStateWithLifecycle()
+    val availableUpdateRelease by viewModel.availableUpdateRelease.collectAsStateWithLifecycle()
+    val updateCheckFeedback by viewModel.updateCheckFeedback.collectAsStateWithLifecycle()
+    val isUpdateInstallInProgress by viewModel.isUpdateInstallInProgress.collectAsStateWithLifecycle()
     val silentDeleteDcimLabel = remember(silentDeleteTreeUris) {
         viewModel.getSilentDeleteDirectoryLabel(SilentDeleteScope.Dcim)
     }
@@ -158,6 +168,11 @@ fun MainScreen(
         swipeRightAction = swipeRightAction,
         swipeUpAction = swipeUpAction,
         swipeDownAction = swipeDownAction,
+        defaultBehaviorNoticeMode = defaultBehaviorNoticeMode,
+        shouldShowDefaultBehaviorNotice = shouldShowDefaultBehaviorNotice,
+        availableUpdateRelease = availableUpdateRelease,
+        updateCheckFeedback = updateCheckFeedback,
+        isUpdateInstallInProgress = isUpdateInstallInProgress,
         onRequestPermission = onRequestPermission,
         onOpenSettings = onOpenSettings,
         onPermissionRationaleDismissed = onPermissionRationaleDismissed,
@@ -178,12 +193,22 @@ fun MainScreen(
         onSwipeRightActionChange = viewModel::setSwipeRightAction,
         onSwipeUpActionChange = viewModel::setSwipeUpAction,
         onSwipeDownActionChange = viewModel::setSwipeDownAction,
+        onDefaultBehaviorNoticeEnabledChange = viewModel::setDefaultBehaviorNoticeEnabled,
         selectedLanguageTag = selectedLanguageTag,
         onLanguageTagChange = onLanguageTagChange,
         onSwipeAction = viewModel::performSwipeAction,
+        onManualUpdateCheck = viewModel::checkForUpdatesManually,
+        onClearUpdateFeedback = viewModel::clearUpdateCheckFeedback,
+        onDismissAvailableUpdate = viewModel::dismissAvailableUpdatePrompt,
+        onDeferCurrentUpdate = viewModel::deferCurrentAvailableUpdate,
+        onStartUpdateInstallation = viewModel::startUpdateInstallation,
         showPermissionRationale = showPermissionRationale,
         modifier = modifier,
     )
+
+    LaunchedEffect(Unit) {
+        viewModel.checkForUpdatesOnLaunchIfNeeded()
+    }
 }
 
 @Composable
@@ -204,6 +229,11 @@ private fun MainScreenContent(
     swipeRightAction: SwipeAction,
     swipeUpAction: SwipeAction,
     swipeDownAction: SwipeAction,
+    defaultBehaviorNoticeMode: DefaultBehaviorNoticeMode,
+    shouldShowDefaultBehaviorNotice: Boolean,
+    availableUpdateRelease: AppReleaseInfo?,
+    updateCheckFeedback: UpdateCheckFeedback,
+    isUpdateInstallInProgress: Boolean,
     onRequestPermission: () -> Unit,
     onOpenSettings: () -> Unit,
     onPermissionRationaleDismissed: () -> Unit,
@@ -220,9 +250,15 @@ private fun MainScreenContent(
     onSwipeRightActionChange: (SwipeAction) -> Unit,
     onSwipeUpActionChange: (SwipeAction) -> Unit,
     onSwipeDownActionChange: (SwipeAction) -> Unit,
+    onDefaultBehaviorNoticeEnabledChange: (Boolean) -> Unit,
     selectedLanguageTag: String,
     onLanguageTagChange: (String) -> Unit,
     onSwipeAction: (SwipeAction, Long) -> Boolean,
+    onManualUpdateCheck: () -> Unit,
+    onClearUpdateFeedback: () -> Unit,
+    onDismissAvailableUpdate: () -> Unit,
+    onDeferCurrentUpdate: () -> Unit,
+    onStartUpdateInstallation: () -> Unit,
     showPermissionRationale: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -245,7 +281,7 @@ private fun MainScreenContent(
     }
 
     var isSettingsDialogVisible by rememberSaveable { mutableStateOf(false) }
-    var isDefaultNoticeDismissed by rememberSaveable { mutableStateOf(false) }
+    var isDefaultNoticeDismissedBySession by rememberSaveable { mutableStateOf(false) }
     var isDefaultNoticeExpanded by rememberSaveable { mutableStateOf(true) }
     var hasDefaultNoticeAutoCollapsed by rememberSaveable { mutableStateOf(false) }
     val topVisibleImageId = (effectiveState as? HomeUiState.Ready)?.visibleIds?.firstOrNull()
@@ -253,7 +289,16 @@ private fun MainScreenContent(
     val canSwipeNext = (effectiveState as? HomeUiState.Ready)?.canSwipeToNext == true
     val shouldShowDefaultNotice =
         effectiveState != HomeUiState.PermissionDenied &&
-            !isDefaultNoticeDismissed
+            shouldShowDefaultBehaviorNotice &&
+            !isDefaultNoticeDismissedBySession
+
+    LaunchedEffect(shouldShowDefaultBehaviorNotice) {
+        if (!shouldShowDefaultBehaviorNotice) {
+            isDefaultNoticeDismissedBySession = false
+            isDefaultNoticeExpanded = true
+            hasDefaultNoticeAutoCollapsed = false
+        }
+    }
 
     LaunchedEffect(shouldShowDefaultNotice, hasDefaultNoticeAutoCollapsed) {
         if (!shouldShowDefaultNotice || hasDefaultNoticeAutoCollapsed) {
@@ -261,7 +306,7 @@ private fun MainScreenContent(
         }
 
         delay(DEFAULT_BEHAVIOR_NOTICE_AUTO_COLLAPSE_DELAY_MS)
-        if (!isDefaultNoticeDismissed) {
+        if (!isDefaultNoticeDismissedBySession) {
             isDefaultNoticeExpanded = false
             hasDefaultNoticeAutoCollapsed = true
         }
@@ -325,7 +370,7 @@ private fun MainScreenContent(
                                 isDefaultNoticeExpanded = !isDefaultNoticeExpanded
                             },
                             onDismiss = {
-                                isDefaultNoticeDismissed = true
+                                isDefaultNoticeDismissedBySession = true
                             },
                             modifier = Modifier
                                 .align(Alignment.TopCenter)
@@ -413,8 +458,37 @@ private fun MainScreenContent(
             onSwipeRightActionChange = onSwipeRightActionChange,
             onSwipeUpActionChange = onSwipeUpActionChange,
             onSwipeDownActionChange = onSwipeDownActionChange,
+            defaultBehaviorNoticeMode = defaultBehaviorNoticeMode,
+            onDefaultBehaviorNoticeEnabledChange = onDefaultBehaviorNoticeEnabledChange,
             onLanguageTagChange = onLanguageTagChange,
+            onCheckUpdateClick = onManualUpdateCheck,
         )
+    }
+
+    if (availableUpdateRelease != null) {
+        UpdateAvailableDialog(
+            release = availableUpdateRelease,
+            isInstalling = isUpdateInstallInProgress,
+            onDismiss = onDismissAvailableUpdate,
+            onLater = onDeferCurrentUpdate,
+            onUpdateNow = onStartUpdateInstallation,
+        )
+    }
+
+    when (val feedback = updateCheckFeedback) {
+        UpdateCheckFeedback.Idle,
+        UpdateCheckFeedback.Checking,
+        -> Unit
+
+        UpdateCheckFeedback.UpToDate,
+        is UpdateCheckFeedback.DeferredUntilNewer,
+        is UpdateCheckFeedback.Failed,
+        -> {
+            UpdateStatusDialog(
+                feedback = feedback,
+                onDismiss = onClearUpdateFeedback,
+            )
+        }
     }
 }
 
@@ -658,6 +732,11 @@ private fun DefaultBehaviorNotice(
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.86f),
                     )
+                    Text(
+                        text = stringResource(id = R.string.default_behavior_line_visibility_rule),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.86f),
+                    )
                 }
             }
         }
@@ -738,6 +817,7 @@ private fun SettingsDialog(
     swipeRightAction: SwipeAction,
     swipeUpAction: SwipeAction,
     swipeDownAction: SwipeAction,
+    defaultBehaviorNoticeMode: DefaultBehaviorNoticeMode,
     selectedLanguageTag: String,
     onDismiss: () -> Unit,
     onSwipeDeleteEnabledChange: (Boolean) -> Unit,
@@ -752,7 +832,9 @@ private fun SettingsDialog(
     onSwipeRightActionChange: (SwipeAction) -> Unit,
     onSwipeUpActionChange: (SwipeAction) -> Unit,
     onSwipeDownActionChange: (SwipeAction) -> Unit,
+    onDefaultBehaviorNoticeEnabledChange: (Boolean) -> Unit,
     onLanguageTagChange: (String) -> Unit,
+    onCheckUpdateClick: () -> Unit,
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -786,6 +868,10 @@ private fun SettingsDialog(
 
                 SettingsSectionTitle(text = stringResource(id = R.string.settings_section_guide))
                 UsageGuideCard()
+                DefaultBehaviorNoticeControls(
+                    mode = defaultBehaviorNoticeMode,
+                    onCheckedChange = onDefaultBehaviorNoticeEnabledChange,
+                )
 
                 SettingsSectionTitle(text = stringResource(id = R.string.settings_section_display))
                 ImageDisplayControls(
@@ -835,6 +921,11 @@ private fun SettingsDialog(
                 LanguageSettingsControls(
                     selectedLanguageTag = selectedLanguageTag,
                     onLanguageTagChange = onLanguageTagChange,
+                )
+
+                SettingsSectionTitle(text = stringResource(id = R.string.settings_section_update))
+                UpdateControls(
+                    onCheckUpdateClick = onCheckUpdateClick,
                 )
             }
         }
@@ -895,6 +986,264 @@ private fun UsageGuideCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Text(
+                text = stringResource(id = R.string.usage_guide_line_five),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DefaultBehaviorNoticeControls(
+    mode: DefaultBehaviorNoticeMode,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val isEnabled = mode == DefaultBehaviorNoticeMode.Visible
+    val descriptionRes = when (mode) {
+        DefaultBehaviorNoticeMode.Visible -> R.string.default_behavior_visibility_visible_description
+        DefaultBehaviorNoticeMode.AutoHidden -> R.string.default_behavior_visibility_auto_hidden_description
+        DefaultBehaviorNoticeMode.UserHidden -> R.string.default_behavior_visibility_user_hidden_description
+    }
+
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 18.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = stringResource(id = R.string.default_behavior_visibility_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = stringResource(id = descriptionRes),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            Switch(
+                checked = isEnabled,
+                onCheckedChange = onCheckedChange,
+            )
+        }
+    }
+}
+
+@Composable
+private fun UpdateControls(
+    onCheckUpdateClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = stringResource(id = R.string.update_controls_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = stringResource(id = R.string.update_controls_description, BuildConfig.VERSION_NAME),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            FilledTonalButton(
+                onClick = onCheckUpdateClick,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(text = stringResource(id = R.string.update_controls_check_button))
+            }
+        }
+    }
+}
+
+@Composable
+private fun UpdateAvailableDialog(
+    release: AppReleaseInfo,
+    isInstalling: Boolean,
+    onDismiss: () -> Unit,
+    onLater: () -> Unit,
+    onUpdateNow: () -> Unit,
+) {
+    Dialog(
+        onDismissRequest = if (isInstalling) {
+            {}
+        } else {
+            onDismiss
+        },
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 3.dp,
+            shadowElevation = 10.dp,
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    text = stringResource(id = R.string.update_dialog_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+
+                Text(
+                    text = stringResource(
+                        id = R.string.update_dialog_message,
+                        release.normalizedVersion,
+                        BuildConfig.VERSION_NAME,
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                release.notes
+                    ?.lineSequence()
+                    ?.firstOrNull { line -> line.isNotBlank() }
+                    ?.let { firstLine ->
+                        Text(
+                            text = firstLine,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+
+                release.releasePageUrl
+                    ?.takeIf { url -> url.isNotBlank() }
+                    ?.let { releaseUrl ->
+                        Text(
+                            text = releaseUrl,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                ) {
+                TextButton(
+                    onClick = onDismiss,
+                    enabled = !isInstalling,
+                ) {
+                    Text(text = stringResource(id = R.string.update_dialog_not_now))
+                }
+
+                OutlinedButton(
+                    onClick = onLater,
+                    enabled = !isInstalling,
+                ) {
+                    Text(text = stringResource(id = R.string.update_dialog_later))
+                }
+
+                Button(
+                    onClick = onUpdateNow,
+                    enabled = !isInstalling,
+                ) {
+                        if (isInstalling) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                            )
+                        }
+                        Text(
+                            text = stringResource(id = R.string.update_dialog_update_now),
+                            modifier = Modifier.padding(start = if (isInstalling) 8.dp else 0.dp),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun UpdateStatusDialog(
+    feedback: UpdateCheckFeedback,
+    onDismiss: () -> Unit,
+) {
+    val messageRes = when (feedback) {
+        UpdateCheckFeedback.UpToDate -> R.string.update_status_latest
+        is UpdateCheckFeedback.DeferredUntilNewer -> R.string.update_status_deferred
+        is UpdateCheckFeedback.Failed -> R.string.update_status_failed
+        UpdateCheckFeedback.Idle,
+        UpdateCheckFeedback.Checking,
+        -> return
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface,
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    text = stringResource(id = R.string.update_status_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+
+                val message = when (feedback) {
+                    UpdateCheckFeedback.UpToDate -> stringResource(id = messageRes)
+                    is UpdateCheckFeedback.DeferredUntilNewer -> stringResource(
+                        id = messageRes,
+                        feedback.deferredVersion,
+                    )
+                    is UpdateCheckFeedback.Failed -> stringResource(id = messageRes)
+                    UpdateCheckFeedback.Idle,
+                    UpdateCheckFeedback.Checking,
+                    -> ""
+                }
+
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    OutlinedButton(onClick = onDismiss) {
+                        Text(text = stringResource(id = R.string.settings_dialog_done))
+                    }
+                }
+            }
         }
     }
 }
@@ -2264,6 +2613,11 @@ private fun MainScreenReadyPreview() {
             swipeRightAction = PREVIEW_DEFAULT_RIGHT_ACTION,
             swipeUpAction = PREVIEW_DEFAULT_UP_ACTION,
             swipeDownAction = PREVIEW_DEFAULT_DOWN_ACTION,
+            defaultBehaviorNoticeMode = DefaultBehaviorNoticeMode.Visible,
+            shouldShowDefaultBehaviorNotice = true,
+            availableUpdateRelease = null,
+            updateCheckFeedback = UpdateCheckFeedback.Idle,
+            isUpdateInstallInProgress = false,
             onRequestPermission = {},
             onOpenSettings = {},
             onPermissionRationaleDismissed = {},
@@ -2280,9 +2634,15 @@ private fun MainScreenReadyPreview() {
             onSwipeRightActionChange = {},
             onSwipeUpActionChange = {},
             onSwipeDownActionChange = {},
+            onDefaultBehaviorNoticeEnabledChange = {},
             selectedLanguageTag = SettingsRepository.SYSTEM_LANGUAGE_TAG,
             onLanguageTagChange = {},
             onSwipeAction = { _, _ -> true },
+            onManualUpdateCheck = {},
+            onClearUpdateFeedback = {},
+            onDismissAvailableUpdate = {},
+            onDeferCurrentUpdate = {},
+            onStartUpdateInstallation = {},
             showPermissionRationale = false,
         )
     }
@@ -2309,6 +2669,11 @@ private fun MainScreenPermissionPreview() {
             swipeRightAction = PREVIEW_DEFAULT_RIGHT_ACTION,
             swipeUpAction = PREVIEW_DEFAULT_UP_ACTION,
             swipeDownAction = PREVIEW_DEFAULT_DOWN_ACTION,
+            defaultBehaviorNoticeMode = DefaultBehaviorNoticeMode.Visible,
+            shouldShowDefaultBehaviorNotice = true,
+            availableUpdateRelease = null,
+            updateCheckFeedback = UpdateCheckFeedback.Idle,
+            isUpdateInstallInProgress = false,
             onRequestPermission = {},
             onOpenSettings = {},
             onPermissionRationaleDismissed = {},
@@ -2325,9 +2690,15 @@ private fun MainScreenPermissionPreview() {
             onSwipeRightActionChange = {},
             onSwipeUpActionChange = {},
             onSwipeDownActionChange = {},
+            onDefaultBehaviorNoticeEnabledChange = {},
             selectedLanguageTag = SettingsRepository.SYSTEM_LANGUAGE_TAG,
             onLanguageTagChange = {},
             onSwipeAction = { _, _ -> true },
+            onManualUpdateCheck = {},
+            onClearUpdateFeedback = {},
+            onDismissAvailableUpdate = {},
+            onDeferCurrentUpdate = {},
+            onStartUpdateInstallation = {},
             showPermissionRationale = true,
         )
     }

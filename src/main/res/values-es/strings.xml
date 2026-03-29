@@ -26,6 +26,99 @@
     <string name="swipe_delete_enabled_description">Activado. Deslizar hacia arriba en la tarjeta superior pedirá a Android eliminar esa foto.</string>
     <string name="swipe_delete_disabled_description">Desactivado para una navegación más segura. Deslizar hacia arriba funciona como omitir.</string>
 
+    <string name="default_behavior_title">Controles predeterminados</string>
+    <string name="default_behavior_line_up_next">Desliza arriba: foto siguiente</string>
+    <string name="default_behavior_line_down_previous">Desliza abajo: foto anterior</string>
+    <string name="default_behavior_line_left_delete">Desliza izquierda: eliminar foto</string>
+    <string name="default_behavior_line_delete_prerequisite">Eliminar requiere activar "Habilitar acción de eliminar" en Ajustes. Si está desactivado, los gestos de eliminar pasan a foto siguiente.</string>
+    <string name="default_behavior_line_direct_delete">¿Quieres eliminar sin confirmación de Android? Activa Eliminación silenciosa en Ajustes.</string>
+    <string name="default_behavior_line_visibility_rule">Sugerencia: este panel se oculta automáticamente tras aparecer 5 veces en un mes y se vuelve a activar el mes siguiente. Si lo desactivas manualmente en Ajustes, seguirá apagado el mes siguiente.</string>
+    <string name="default_behavior_collapsed_hint">Toca para expandir controles predeterminados</string>
+    <string name="default_behavior_expand">Expandir controles predeterminados</string>
+    <string name="default_behavior_collapse">Contraer controles predeterminados</string>
+    <string name="default_behavior_close">Ocultar controles predeterminados</string>
+
+    <string name="show_full_image_title">Mostrar imagen completa en la tarjeta</string>
+    <string name="show_full_image_enabled_description">Activado. La tarjeta muestra toda la foto, con márgenes vacíos si hace falta.</string>
+    <string name="show_full_image_disabled_description">Desactivado (predeterminado). La tarjeta usa recorte para llenar el área.</string>
+    <string name="floating_delete_button_title">Botón flotante de eliminar</string>
+    <string name="floating_delete_button_enabled_description">Activado. Aparece un botón rojo abajo a la derecha y puede arrastrarse tras pulsación larga.</string>
+    <string name="floating_delete_button_disabled_description">Desactivado por defecto. No se muestra botón flotante.</string>
+    <string name="gesture_ball_title">Bola flotante de gestos</string>
+    <string name="gesture_ball_enabled_description">Activado. Desliza del centro al aro de color para previsualizar y suelta para ejecutar. Mantén pulsado el centro para moverla.</string>
+    <string name="gesture_ball_disabled_description">Desactivado por defecto. Usa solo deslizamientos normales de tarjeta.</string>
+    <string name="gesture_ball_size_label">Tamaño de la bola: %1$d%%</string>
+    <string name="gesture_ball_preview_execute">Suelta para ejecutar: %1$s</string>
+    <string name="gesture_ball_preview_unavailable">Ahora no se puede ejecutar: %1$s</string>
+
+    <string name="silent_delete_title">Eliminación silenciosa</string>
+    <string name="silent_delete_enabled_description">Activado para %1$s. Las fotos dentro de esa carpeta autorizada se eliminan sin confirmación. Fuera de ella, Android sigue pidiendo confirmación.</string>
+    <string name="silent_delete_pending_description">Activado, pero las carpetas necesarias aún no están totalmente autorizadas. Autoriza DCIM y Pictures para cubrir cámara y capturas.</string>
+    <string name="silent_delete_directory_ready_description">Carpeta autorizada: %1$s. Activa Eliminación silenciosa para omitir confirmación dentro de esa carpeta.</string>
+    <string name="silent_delete_disabled_description">Desactivado. Eliminar con gesto sigue usando confirmación de Android. Solo funciona tras activar esta opción y autorizar una carpeta.</string>
+    <string name="silent_delete_select_directory">Autorizar carpeta</string>
+    <string name="silent_delete_change_directory">Cambiar carpeta autorizada</string>
+    <string name="silent_delete_scope_dcim">DCIM</string>
+    <string name="silent_delete_scope_pictures">Pictures</string>
+    <string name="silent_delete_scope_ready_description">Autorizada: %1$s</string>
+    <string name="silent_delete_scope_missing_description">Sin autorizar aún</string>
+
+    <string name="swipe_behavior_title">Comportamiento de deslizamiento</string>
+    <string name="swipe_behavior_description">Elige la acción para cada dirección de deslizamiento.</string>
+    <string name="swipe_direction_left">Deslizar a la izquierda</string>
+    <string name="swipe_direction_right">Deslizar a la derecha</string>
+    <string name="swipe_direction_up">Deslizar hacia arriba</string>
+    <string name="swipe_direction_down">Deslizar hacia abajo</string>
+    <string name="swipe_action_skip">Omitir / sin acción</string>
+    <string name="swipe_action_delete">Eliminar</string>
+    <string name="swipe_action_previous">Foto anterior</string>
+    <string name="swipe_action_next">Foto siguiente</string>
+
+    <string name="settings_entry_title">Ajustes</string>
+    <string name="settings_entry_description">Personaliza gestos, eliminación, visualización e idioma.</string>
+    <string name="settings_entry_open">Abrir</string>
+    <string name="settings_dialog_title">Ajustes</string>
+    <string name="settings_dialog_done">Listo</string>
+    <string name="settings_section_guide">Guía</string>
+    <string name="settings_section_display">Visualización</string>
+    <string name="settings_section_swipe">Gestos</string>
+    <string name="settings_section_delete">Eliminar</string>
+    <string name="settings_section_language">Idioma</string>
+    <string name="settings_section_update">Actualización</string>
+
+    <string name="usage_guide_title">Cómo usar rápidamente</string>
+    <string name="usage_guide_line_one">1) Barajar: desliza tarjetas según tu configuración, o usa la bola de gestos si está activada.</string>
+    <string name="usage_guide_line_two">2) Eliminación: primero activa "Habilitar acción de eliminar". Sin eso, los gestos de eliminar pasan a foto siguiente.</string>
+    <string name="usage_guide_line_three">3) Eliminación silenciosa: actívala y autoriza DCIM y Pictures. Abrimos cada carpeta padre para una configuración rápida.</string>
+    <string name="usage_guide_line_four">4) Si el movimiento de tarjetas se siente extraño, toca Mezclar de nuevo una vez para reconstruir la baraja.</string>
+    <string name="usage_guide_line_five">5) Panel de controles predeterminados: si aparece 5 veces en un mes, se oculta automáticamente el resto del mes y se activa al mes siguiente. Si lo apagas manualmente, seguirá apagado el mes siguiente.</string>
+
+    <string name="default_behavior_visibility_title">Mostrar panel de controles predeterminados</string>
+    <string name="default_behavior_visibility_visible_description">Activado. El panel puede aparecer al abrir la app. Se oculta automáticamente tras 5 apariciones en un mes.</string>
+    <string name="default_behavior_visibility_auto_hidden_description">Oculto temporalmente este mes tras aparecer 5 veces. Se activará automáticamente el próximo mes.</string>
+    <string name="default_behavior_visibility_user_hidden_description">Desactivado por ti. Seguirá apagado el próximo mes hasta que lo actives de nuevo.</string>
+
+    <string name="update_controls_title">Actualización de la app</string>
+    <string name="update_controls_description">Versión actual: %1$s</string>
+    <string name="update_controls_check_button">Buscar actualizaciones</string>
+    <string name="update_dialog_title">Nueva versión disponible</string>
+    <string name="update_dialog_message">Hay una versión más nueva (%1$s). Tu versión actual es %2$s.</string>
+    <string name="update_dialog_not_now">Ahora no</string>
+    <string name="update_dialog_later">Avisar con una más nueva</string>
+    <string name="update_dialog_update_now">Actualizar ahora</string>
+    <string name="update_status_title">Comprobación de actualización</string>
+    <string name="update_status_latest">Ya tienes la versión más reciente.</string>
+    <string name="update_status_deferred">Elegiste omitir la versión %1$s. Solo se volverá a avisar cuando exista una versión superior.</string>
+    <string name="update_status_failed">No se pudo comprobar o instalar la actualización. Inténtalo de nuevo más tarde.</string>
+
+    <string name="silent_delete_guide_title">Activar eliminación fluida</string>
+    <string name="silent_delete_guide_description_dcim">A continuación, Android abrirá la autorización de carpeta apuntando a la carpeta padre DCIM (incluye Camera y muchas rutas de capturas).</string>
+    <string name="silent_delete_guide_description_pictures">A continuación, Android abrirá la autorización de carpeta apuntando a la carpeta padre Pictures (cubre muchas carpetas de capturas).</string>
+    <string name="silent_delete_guide_hint_dcim">Pulsa "Usar esta carpeta" para autorizar toda la biblioteca DCIM.</string>
+    <string name="silent_delete_guide_hint_pictures">Pulsa "Usar esta carpeta" para autorizar toda la biblioteca Pictures.</string>
+    <string name="silent_delete_guide_cancel">Ahora no</string>
+    <string name="silent_delete_guide_continue">Abrir ahora</string>
+
     <string name="photo_content_description">Foto de tu biblioteca</string>
     <string name="photo_load_error_title">No se pudo cargar esta foto.</string>
     <string name="photo_loading_title">Cargando foto...</string>

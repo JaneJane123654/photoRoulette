@@ -5,19 +5,29 @@ import android.app.Application
 import android.net.Uri
 import android.os.Build
 import androidx.activity.result.IntentSenderRequest
+import androidx.core.content.FileProvider
 import android.provider.DocumentsContract
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import coil.ImageLoader
 import coil.request.ImageRequest
+import com.example.photoroulette.BuildConfig
 import com.example.photoroulette.data.datastore.SettingsRepository
 import com.example.photoroulette.data.media.MediaRepository
+import com.example.photoroulette.data.update.AppUpdateRepository
+import com.example.photoroulette.model.AppReleaseInfo
+import com.example.photoroulette.model.DefaultBehaviorNoticeMode
 import com.example.photoroulette.model.SilentDeleteScope
 import com.example.photoroulette.model.SwipeAction
+import com.example.photoroulette.model.UpdateCheckFeedback
 import com.example.photoroulette.utils.IntentHelper
 import com.example.photoroulette.utils.PermissionHelper
+import com.example.photoroulette.utils.VersionNameUtils
 import com.example.photoroulette.viewmodel.states.HomeUiState
+import java.io.File
 import java.util.ArrayList
+import java.util.Calendar
+import java.util.Locale
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -38,6 +48,7 @@ class MainViewModel(
     private val savedStateHandle: SavedStateHandle,
     private val settingsRepository: SettingsRepository,
     private val mediaRepository: MediaRepository,
+    private val appUpdateRepository: AppUpdateRepository,
     private val imageLoader: ImageLoader,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : AndroidViewModel(application) {
@@ -50,11 +61,13 @@ class MainViewModel(
         savedStateHandle = savedStateHandle,
         settingsRepository = SettingsRepository(application),
         mediaRepository = MediaRepository(application),
+        appUpdateRepository = AppUpdateRepository(application),
         imageLoader = ImageLoader(application),
     )
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var loadJob: Job? = null
+    private var updateCheckJob: Job? = null
     private var queueIds: MutableList<Long> = restoreQueueIds()
 
     private var currentIndex: Int = (savedStateHandle[KEY_CURRENT_INDEX] ?: 0).coerceAtLeast(0)
@@ -144,6 +157,42 @@ class MainViewModel(
     )
     val swipeDownAction: StateFlow<SwipeAction> = _swipeDownAction.asStateFlow()
 
+    private val _defaultBehaviorNoticeMode = MutableStateFlow(
+        restoredDefaultBehaviorNoticeMode(),
+    )
+    val defaultBehaviorNoticeMode: StateFlow<DefaultBehaviorNoticeMode> =
+        _defaultBehaviorNoticeMode.asStateFlow()
+
+    private val _shouldShowDefaultBehaviorNotice = MutableStateFlow(
+        savedStateHandle[KEY_SHOULD_SHOW_DEFAULT_BEHAVIOR_NOTICE] ?: false,
+    )
+    val shouldShowDefaultBehaviorNotice: StateFlow<Boolean> =
+        _shouldShowDefaultBehaviorNotice.asStateFlow()
+
+    private var hasPreparedDefaultBehaviorNoticeForSession =
+        savedStateHandle[KEY_HAS_PREPARED_DEFAULT_BEHAVIOR_NOTICE] ?: false
+
+    private var pendingUpdatePackagePath: String? = null
+
+    private val _skippedUpdateVersion = MutableStateFlow(
+        savedStateHandle.get<String>(KEY_SKIPPED_UPDATE_VERSION),
+    )
+    val skippedUpdateVersion: StateFlow<String?> = _skippedUpdateVersion.asStateFlow()
+
+    private val _availableUpdateRelease = MutableStateFlow<AppReleaseInfo?>(null)
+    val availableUpdateRelease: StateFlow<AppReleaseInfo?> = _availableUpdateRelease.asStateFlow()
+
+    private val _updateCheckFeedback = MutableStateFlow<UpdateCheckFeedback>(UpdateCheckFeedback.Idle)
+    val updateCheckFeedback: StateFlow<UpdateCheckFeedback> = _updateCheckFeedback.asStateFlow()
+
+    private val _isUpdateInstallInProgress = MutableStateFlow(false)
+    val isUpdateInstallInProgress: StateFlow<Boolean> = _isUpdateInstallInProgress.asStateFlow()
+
+    private val _updateInstallRequests = MutableSharedFlow<Uri>(extraBufferCapacity = 1)
+    val updateInstallRequests: SharedFlow<Uri> = _updateInstallRequests.asSharedFlow()
+
+    private var hasCheckedUpdatesOnLaunch = false
+
     private val _deleteRequests = MutableSharedFlow<IntentSenderRequest>(extraBufferCapacity = 1)
     val deleteRequests: SharedFlow<IntentSenderRequest> = _deleteRequests.asSharedFlow()
 
@@ -232,6 +281,24 @@ class MainViewModel(
             }
         }
 
+        scope.launch {
+            settingsRepository.defaultBehaviorNoticeMode.collect { mode ->
+                _defaultBehaviorNoticeMode.value = mode
+                savedStateHandle[KEY_DEFAULT_BEHAVIOR_NOTICE_MODE] = mode.storageValue
+            }
+        }
+
+        scope.launch {
+            settingsRepository.skippedUpdateVersion.collect { skippedVersion ->
+                _skippedUpdateVersion.value = skippedVersion
+                savedStateHandle[KEY_SKIPPED_UPDATE_VERSION] = skippedVersion
+            }
+        }
+
+        scope.launch(ioDispatcher) {
+            appUpdateRepository.cleanupDownloadedApkPackages()
+        }
+
         if (_permissionMode.value != PermissionHelper.PermissionMode.DENIED && queueIds.isNotEmpty()) {
             emitQueueState()
             preloadUpcomingImages()
@@ -251,6 +318,10 @@ class MainViewModel(
             PermissionHelper.PermissionMode.GRANTED_ALL,
             PermissionHelper.PermissionMode.GRANTED_PARTIAL,
             -> {
+                scope.launch(ioDispatcher) {
+                    prepareDefaultBehaviorNoticeForSessionIfNeeded()
+                }
+
                 if (queueIds.isEmpty()) {
                     refreshMedia()
                 } else {
@@ -642,6 +713,77 @@ class MainViewModel(
         }
     }
 
+    fun setDefaultBehaviorNoticeEnabled(enabled: Boolean) {
+        scope.launch(ioDispatcher) {
+            settingsRepository.setDefaultBehaviorNoticeEnabled(enabled)
+            _shouldShowDefaultBehaviorNotice.value = enabled
+            savedStateHandle[KEY_SHOULD_SHOW_DEFAULT_BEHAVIOR_NOTICE] = enabled
+        }
+    }
+
+    fun checkForUpdatesOnLaunchIfNeeded() {
+        if (hasCheckedUpdatesOnLaunch) {
+            return
+        }
+        hasCheckedUpdatesOnLaunch = true
+        checkForUpdates(initiatedByUser = false)
+    }
+
+    fun checkForUpdatesManually() {
+        checkForUpdates(initiatedByUser = true)
+    }
+
+    fun clearUpdateCheckFeedback() {
+        _updateCheckFeedback.value = UpdateCheckFeedback.Idle
+    }
+
+    fun dismissAvailableUpdatePrompt() {
+        _availableUpdateRelease.value = null
+    }
+
+    fun deferCurrentAvailableUpdate() {
+        val release = _availableUpdateRelease.value ?: return
+        val deferredVersion = release.normalizedVersion
+        scope.launch(ioDispatcher) {
+            settingsRepository.setSkippedUpdateVersion(deferredVersion)
+        }
+        _updateCheckFeedback.value = UpdateCheckFeedback.DeferredUntilNewer(deferredVersion)
+        _availableUpdateRelease.value = null
+    }
+
+    fun startUpdateInstallation() {
+        val release = _availableUpdateRelease.value ?: return
+        scope.launch(ioDispatcher) {
+            try {
+                _isUpdateInstallInProgress.value = true
+                val downloadedApk = appUpdateRepository.downloadReleaseApk(release)
+                pendingUpdatePackagePath = downloadedApk.absolutePath
+                val context = getApplication<Application>()
+                val installUri = FileProvider.getUriForFile(
+                    context,
+                    "${BuildConfig.APPLICATION_ID}.fileprovider",
+                    downloadedApk,
+                )
+                _updateInstallRequests.emit(installUri)
+                _availableUpdateRelease.value = null
+            } catch (_: Throwable) {
+                clearPendingDownloadedUpdatePackage()
+                _updateCheckFeedback.value = UpdateCheckFeedback.Failed()
+            } finally {
+                _isUpdateInstallInProgress.value = false
+            }
+        }
+    }
+
+    fun onUpdateInstallFlowFinished() {
+        clearPendingDownloadedUpdatePackage()
+    }
+
+    fun onUpdateInstallLaunchFailed() {
+        clearPendingDownloadedUpdatePackage()
+        _updateCheckFeedback.value = UpdateCheckFeedback.Failed()
+    }
+
     override fun onCleared() {
         scope.cancel()
         super.onCleared()
@@ -702,6 +844,134 @@ class MainViewModel(
 
     private fun restoredSwipeAction(key: String): SwipeAction? {
         return SwipeAction.fromStorageValue(savedStateHandle[key])
+    }
+
+    private fun restoredDefaultBehaviorNoticeMode(): DefaultBehaviorNoticeMode {
+        return DefaultBehaviorNoticeMode.fromStorageValue(
+            savedStateHandle[KEY_DEFAULT_BEHAVIOR_NOTICE_MODE],
+        ) ?: DefaultBehaviorNoticeMode.Visible
+    }
+
+    private suspend fun prepareDefaultBehaviorNoticeForSessionIfNeeded() {
+        if (hasPreparedDefaultBehaviorNoticeForSession) {
+            return
+        }
+
+        if (_permissionMode.value == PermissionHelper.PermissionMode.DENIED) {
+            return
+        }
+
+        val shouldShowNotice = settingsRepository.prepareDefaultBehaviorNoticeForSession(
+            currentMonthKey = currentMonthKey(),
+            monthlyDisplayLimit = DEFAULT_BEHAVIOR_NOTICE_MONTHLY_MAX_SHOWN,
+        )
+        hasPreparedDefaultBehaviorNoticeForSession = true
+        savedStateHandle[KEY_HAS_PREPARED_DEFAULT_BEHAVIOR_NOTICE] = true
+        _shouldShowDefaultBehaviorNotice.value = shouldShowNotice
+        savedStateHandle[KEY_SHOULD_SHOW_DEFAULT_BEHAVIOR_NOTICE] = shouldShowNotice
+    }
+
+    private fun checkForUpdates(
+        initiatedByUser: Boolean,
+    ) {
+        updateCheckJob?.cancel()
+        updateCheckJob = scope.launch(ioDispatcher) {
+            _updateCheckFeedback.value = UpdateCheckFeedback.Checking
+
+            runCatching {
+                appUpdateRepository.fetchLatestRelease()
+            }.onSuccess { release ->
+                handleUpdateCheckResult(
+                    release = release,
+                    initiatedByUser = initiatedByUser,
+                )
+            }.onFailure {
+                _availableUpdateRelease.value = null
+                _updateCheckFeedback.value = if (initiatedByUser) {
+                    UpdateCheckFeedback.Failed()
+                } else {
+                    UpdateCheckFeedback.Idle
+                }
+            }
+        }
+    }
+
+    private fun handleUpdateCheckResult(
+        release: AppReleaseInfo?,
+        initiatedByUser: Boolean,
+    ) {
+        if (release == null) {
+            _availableUpdateRelease.value = null
+            _updateCheckFeedback.value = if (initiatedByUser) {
+                UpdateCheckFeedback.UpToDate
+            } else {
+                UpdateCheckFeedback.Idle
+            }
+            return
+        }
+
+        if (!VersionNameUtils.isNewer(release.normalizedVersion, BuildConfig.VERSION_NAME)) {
+            _availableUpdateRelease.value = null
+            _updateCheckFeedback.value = if (initiatedByUser) {
+                UpdateCheckFeedback.UpToDate
+            } else {
+                UpdateCheckFeedback.Idle
+            }
+            if (_skippedUpdateVersion.value != null) {
+                scope.launch(ioDispatcher) {
+                    settingsRepository.setSkippedUpdateVersion(null)
+                }
+            }
+            return
+        }
+
+        val skippedVersion = _skippedUpdateVersion.value
+        val isStillDeferred = skippedVersion != null &&
+            VersionNameUtils.compare(release.normalizedVersion, skippedVersion) <= 0
+
+        if (isStillDeferred) {
+            _availableUpdateRelease.value = null
+            _updateCheckFeedback.value = if (initiatedByUser) {
+                UpdateCheckFeedback.DeferredUntilNewer(skippedVersion)
+            } else {
+                UpdateCheckFeedback.Idle
+            }
+            return
+        }
+
+        if (skippedVersion != null &&
+            VersionNameUtils.compare(release.normalizedVersion, skippedVersion) > 0
+        ) {
+            scope.launch(ioDispatcher) {
+                settingsRepository.setSkippedUpdateVersion(null)
+            }
+        }
+
+        _availableUpdateRelease.value = release
+        _updateCheckFeedback.value = UpdateCheckFeedback.Idle
+    }
+
+    private fun clearPendingDownloadedUpdatePackage() {
+        pendingUpdatePackagePath?.let { path ->
+            runCatching {
+                val targetFile = File(path)
+                if (targetFile.exists() && targetFile.name.startsWith("update-") && targetFile.name.endsWith(".apk")) {
+                    targetFile.delete()
+                }
+            }
+        }
+
+        pendingUpdatePackagePath = null
+        runCatching {
+            appUpdateRepository.cleanupDownloadedApkPackages()
+        }
+    }
+
+    private fun currentMonthKey(): String {
+        val now = Calendar.getInstance()
+        val year = now.get(Calendar.YEAR)
+        val month = now.get(Calendar.MONTH) + 1
+        return String.format(Locale.US, "%04d-%02d", year, month)
     }
 
     private suspend fun buildSilentDeleteRequest(imageId: Long): IntentHelper.SilentDeleteRequest? {
@@ -797,6 +1067,11 @@ class MainViewModel(
         const val KEY_SWIPE_RIGHT_ACTION = "swipe_right_action"
         const val KEY_SWIPE_UP_ACTION = "swipe_up_action"
         const val KEY_SWIPE_DOWN_ACTION = "swipe_down_action"
+        const val KEY_DEFAULT_BEHAVIOR_NOTICE_MODE = "default_behavior_notice_mode"
+        const val KEY_SHOULD_SHOW_DEFAULT_BEHAVIOR_NOTICE = "should_show_default_behavior_notice"
+        const val KEY_HAS_PREPARED_DEFAULT_BEHAVIOR_NOTICE = "has_prepared_default_behavior_notice"
+        const val KEY_SKIPPED_UPDATE_VERSION = "skipped_update_version"
         const val PRELOAD_AHEAD_COUNT = 6
+        const val DEFAULT_BEHAVIOR_NOTICE_MONTHLY_MAX_SHOWN = 5
     }
 }

@@ -25,6 +25,18 @@
     <string name="swipe_delete_title">Enable delete action</string>
     <string name="swipe_delete_enabled_description">Enabled. Any direction mapped to Delete will ask Android to remove that photo.</string>
     <string name="swipe_delete_disabled_description">Disabled for safer browsing. Delete actions will fall back to next photo.</string>
+    <string name="default_behavior_title">Default controls</string>
+    <string name="default_behavior_line_up_next">Up swipe: next photo</string>
+    <string name="default_behavior_line_down_previous">Down swipe: previous photo</string>
+    <string name="default_behavior_line_left_delete">Left swipe: delete photo</string>
+    <string name="default_behavior_line_delete_prerequisite">Delete requires "Enable delete action" in Settings. If it is off, delete gestures become next-photo swipes.</string>
+    <string name="default_behavior_line_direct_delete">Want direct delete without Android confirmation? Turn on Silent delete in Settings.</string>
+    <string name="default_behavior_line_visibility_rule">Tip: this panel auto-hides after appearing 5 times in one month, and auto-enables again next month. If you manually turn it off in Settings, it stays off next month too.</string>
+    <string name="default_behavior_collapsed_hint">Tap to expand default controls</string>
+    <string name="default_behavior_expand">Expand default controls</string>
+    <string name="default_behavior_collapse">Collapse default controls</string>
+    <string name="default_behavior_close">Hide default controls</string>
+
     <string name="show_full_image_title">Show full image in card</string>
     <string name="show_full_image_enabled_description">Enabled. Cards keep the entire photo visible with blank margins if needed.</string>
     <string name="show_full_image_disabled_description">Disabled (default). Cards use crop-fill for a fuller edge-to-edge look.</string>
@@ -49,6 +61,15 @@
     <string name="silent_delete_scope_ready_description">Authorized: %1$s</string>
     <string name="silent_delete_scope_missing_description">Not authorized yet</string>
     <string name="swipe_action_skip">Skip / no action</string>
+    <string name="swipe_action_delete">Delete</string>
+    <string name="swipe_action_previous">Previous photo</string>
+    <string name="swipe_action_next">Next photo</string>
+    <string name="swipe_behavior_title">Swipe behavior</string>
+    <string name="swipe_behavior_description">Choose the action for each swipe direction.</string>
+    <string name="swipe_direction_left">Swipe left</string>
+    <string name="swipe_direction_right">Swipe right</string>
+    <string name="swipe_direction_up">Swipe up</string>
+    <string name="swipe_direction_down">Swipe down</string>
 
     <string name="settings_entry_title">Settings</string>
     <string name="settings_entry_description">Customize gestures, delete behavior, display style, and language.</string>
@@ -60,11 +81,32 @@
     <string name="settings_section_swipe">Gestures</string>
     <string name="settings_section_delete">Delete</string>
     <string name="settings_section_language">Language</string>
+    <string name="settings_section_update">Update</string>
+
     <string name="usage_guide_title">How to use quickly</string>
     <string name="usage_guide_line_one">1) Shuffle: swipe cards by your configured directions, or use the gesture floating ball when enabled.</string>
     <string name="usage_guide_line_two">2) Deletion: first turn on "Enable delete action". Without it, all delete gestures become next-photo.</string>
     <string name="usage_guide_line_three">3) Silent delete: turn it on, then authorize both DCIM and Pictures. We open each parent folder directly for quick setup.</string>
     <string name="usage_guide_line_four">4) If card movement feels off, tap Reshuffle once to rebuild the deck and continue smoothly.</string>
+    <string name="usage_guide_line_five">5) Default controls panel: if it appears 5 times in one month, it auto-hides for the rest of that month and auto-enables next month. If you switch it off manually, it stays off next month too.</string>
+
+    <string name="default_behavior_visibility_title">Show default controls panel</string>
+    <string name="default_behavior_visibility_visible_description">On. The panel can appear on startup. It auto-hides after 5 appearances in one month.</string>
+    <string name="default_behavior_visibility_auto_hidden_description">Temporarily hidden this month after appearing 5 times. It will auto-enable next month.</string>
+    <string name="default_behavior_visibility_user_hidden_description">Off by you. It will stay off next month until you turn it on again.</string>
+
+    <string name="update_controls_title">App update</string>
+    <string name="update_controls_description">Current version: %1$s</string>
+    <string name="update_controls_check_button">Check updates</string>
+    <string name="update_dialog_title">New version available</string>
+    <string name="update_dialog_message">A newer version (%1$s) is available. Your current version is %2$s.</string>
+    <string name="update_dialog_not_now">Not now</string>
+    <string name="update_dialog_later">Remind on newer</string>
+    <string name="update_dialog_update_now">Update now</string>
+    <string name="update_status_title">Update check</string>
+    <string name="update_status_latest">You are already on the latest version.</string>
+    <string name="update_status_deferred">You chose to skip update %1$s. You will be prompted again only when a newer release is available.</string>
+    <string name="update_status_failed">Unable to check or install update. Please try again later.</string>
     <string name="silent_delete_guide_title">Enable smooth delete</string>
     <string name="silent_delete_guide_description_dcim">Next, Android will open folder authorization already pointed at the DCIM parent folder (includes Camera and many screenshot paths).</string>
     <string name="silent_delete_guide_description_pictures">Next, Android will open folder authorization already pointed at the Pictures parent folder (covers many screenshot folders).</string>

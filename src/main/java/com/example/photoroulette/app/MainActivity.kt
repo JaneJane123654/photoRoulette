@@ -117,6 +117,12 @@ class MainActivity : ComponentActivity() {
         viewModel.onSilentDeleteDirectoryGranted(scope, treeUri)
     }
 
+    private val apkInstallLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) {
+        viewModel.onUpdateInstallFlowFinished()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -153,6 +159,22 @@ class MainActivity : ComponentActivity() {
                     viewModel.silentDeleteDirectoryRequests.collectLatest { scope ->
                         pendingSilentDeleteScope = scope
                         isSilentDeleteGuideVisible = true
+                    }
+                }
+
+                LaunchedEffect(viewModel) {
+                    viewModel.updateInstallRequests.collectLatest { installUri ->
+                        val installIntent = Intent(Intent.ACTION_VIEW).apply {
+                            setDataAndType(installUri, "application/vnd.android.package-archive")
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+
+                        runCatching {
+                            apkInstallLauncher.launch(installIntent)
+                        }.onFailure {
+                            viewModel.onUpdateInstallLaunchFailed()
+                        }
                     }
                 }
 
