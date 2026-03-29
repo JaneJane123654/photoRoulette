@@ -1,5 +1,6 @@
 package com.example.photoroulette.ui.screens
 
+import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Canvas
@@ -74,6 +75,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -1178,6 +1180,7 @@ private fun GestureBallOverlay(
     modifier: Modifier = Modifier,
 ) {
     val density = LocalDensity.current
+    val hostView = LocalView.current
     val sizeScale = ballSizeScale.coerceIn(
         SettingsRepository.MIN_GESTURE_BALL_SIZE_SCALE,
         SettingsRepository.MAX_GESTURE_BALL_SIZE_SCALE,
@@ -1235,6 +1238,35 @@ private fun GestureBallOverlay(
         canSwipeNext = canSwipeNext,
         isSwipeDeleteEnabled = isSwipeDeleteEnabled,
     )
+    val segmentVisuals = remember(
+        swipeLeftAction,
+        swipeUpAction,
+        swipeRightAction,
+        swipeDownAction,
+    ) {
+        listOf(
+            GestureBallSegmentVisual(
+                segment = GestureBallSegment.Left,
+                startAngle = 135f,
+                color = gestureActionColor(swipeLeftAction),
+            ),
+            GestureBallSegmentVisual(
+                segment = GestureBallSegment.Up,
+                startAngle = 225f,
+                color = gestureActionColor(swipeUpAction),
+            ),
+            GestureBallSegmentVisual(
+                segment = GestureBallSegment.Right,
+                startAngle = 315f,
+                color = gestureActionColor(swipeRightAction),
+            ),
+            GestureBallSegmentVisual(
+                segment = GestureBallSegment.Down,
+                startAngle = 45f,
+                color = gestureActionColor(swipeDownAction),
+            ),
+        )
+    }
 
     Box(
         modifier = modifier
@@ -1269,18 +1301,25 @@ private fun GestureBallOverlay(
                         innerRadiusPx,
                     ) {
                         awaitEachGesture {
-                            val down = awaitFirstDown(requireUnconsumed = false)
                             val localCenter = Offset(outerRadiusPx, outerRadiusPx)
+                            val down = awaitFirstDown(requireUnconsumed = false)
                             val downDistance = (down.position - localCenter).getDistanceValue()
                             if (downDistance > innerRadiusPx) {
                                 return@awaitEachGesture
+                            }
+
+                            fun toContainerPosition(pointerPosition: Offset): Offset {
+                                return Offset(
+                                    x = center.x - outerRadiusPx + pointerPosition.x,
+                                    y = center.y - outerRadiusPx + pointerPosition.y,
+                                )
                             }
 
                             isDragging = true
                             isRelocating = false
                             hoveredSegment = null
                             var activePointerId = down.id
-                            var lastPointerPosition = down.position
+                            var lastContainerPointer = toContainerPosition(down.position)
                             var hasRelocatedDuringGesture = false
 
                             while (true) {
@@ -1293,9 +1332,10 @@ private fun GestureBallOverlay(
                                     break
                                 }
 
+                                val switchedPointer = activeChange.id != activePointerId
                                 activePointerId = activeChange.id
-                                activeChange.consume()
                                 val currentPosition = activeChange.position
+                                val currentContainerPointer = toContainerPosition(currentPosition)
                                 val movementFromCenter = (currentPosition - localCenter).getDistanceValue()
                                 val holdDuration = activeChange.uptimeMillis - down.uptimeMillis
 
@@ -1305,16 +1345,24 @@ private fun GestureBallOverlay(
                                     movementFromCenter <= innerRadiusPx * GESTURE_BALL_DRAG_CENTER_RATIO
                                 ) {
                                     hasRelocatedDuringGesture = true
+                                    isRelocating = true
+                                    hoveredSegment = null
+                                    hostView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                                    lastContainerPointer = currentContainerPointer
                                 }
 
                                 if (hasRelocatedDuringGesture) {
                                     isRelocating = true
                                     hoveredSegment = null
-                                    val delta = currentPosition - lastPointerPosition
-                                    center = clampCenter(center + delta)
+                                    if (!switchedPointer) {
+                                        val dragDelta = currentContainerPointer - lastContainerPointer
+                                        if (dragDelta != Offset.Zero) {
+                                            center = clampCenter(center + dragDelta)
+                                        }
+                                    }
                                 } else {
                                     isRelocating = false
-                                    hoveredSegment = resolveGestureBallSegment(
+                                    val nextHoveredSegment = resolveGestureBallSegment(
                                         center = localCenter,
                                         pointer = currentPosition,
                                         innerRadius = innerRadiusPx,
@@ -1323,9 +1371,16 @@ private fun GestureBallOverlay(
                                         upAction = swipeUpAction,
                                         downAction = swipeDownAction,
                                     )
+                                    if (nextHoveredSegment != hoveredSegment) {
+                                        hoveredSegment = nextHoveredSegment
+                                        if (nextHoveredSegment != null) {
+                                            hostView.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                        }
+                                    }
                                 }
 
-                                lastPointerPosition = currentPosition
+                                activeChange.consume()
+                                lastContainerPointer = currentContainerPointer
                             }
 
                             val action = hoveredSegment?.action
@@ -1354,29 +1409,6 @@ private fun GestureBallOverlay(
                     y = size.height / 2f - ringRadius,
                 )
                 val arcSize = Size(ringRadius * 2f, ringRadius * 2f)
-
-                val segmentVisuals = listOf(
-                    GestureBallSegmentVisual(
-                        segment = GestureBallSegment.Left,
-                        startAngle = 135f,
-                        color = gestureActionColor(swipeLeftAction),
-                    ),
-                    GestureBallSegmentVisual(
-                        segment = GestureBallSegment.Up,
-                        startAngle = 225f,
-                        color = gestureActionColor(swipeUpAction),
-                    ),
-                    GestureBallSegmentVisual(
-                        segment = GestureBallSegment.Right,
-                        startAngle = 315f,
-                        color = gestureActionColor(swipeRightAction),
-                    ),
-                    GestureBallSegmentVisual(
-                        segment = GestureBallSegment.Down,
-                        startAngle = 45f,
-                        color = gestureActionColor(swipeDownAction),
-                    ),
-                )
 
                 segmentVisuals.forEach { visual ->
                     val highlightScale = if (hoveredSegment?.segment == visual.segment) 1f else 0.76f
