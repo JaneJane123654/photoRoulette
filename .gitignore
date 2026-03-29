@@ -1,0 +1,27 @@
+# Android
+build/
+bin/
+gen/
+out/
+.gradle/
+.idea/
+*.iml
+local.properties
+capture.png
+*.apk
+*.ap_
+*.dex
+*.class
+
+# Kotlin
+.kotlin/
+kotlin-daemon-embeddable-*.jar
+
+# System
+.DS_Store
+Thumbs.db
+
+# Project specific
+Project Implementation Process AI Memory Document.md
+实现文档.md
+plan/
