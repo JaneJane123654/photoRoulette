@@ -12,6 +12,7 @@ capture.png
 *.ap_
 *.dex
 *.class
+*.keystore
 
 # Kotlin
 .kotlin/
@@ -25,3 +26,4 @@ Thumbs.db
 Project Implementation Process AI Memory Document.md
 实现文档.md
 plan/
+.signing_secrets

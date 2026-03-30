@@ -1,4 +1,6 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.gradle.api.GradleException
+import java.util.Properties
 
 plugins {
     id("com.android.application") version "8.13.2"
@@ -14,8 +16,36 @@ android {
         applicationId = "com.example.photoroulette"
         minSdk = 23
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.1.0"
+        versionCode = 3
+        versionName = "1.1.1"
+    }
+
+    val signingSecrets = Properties().apply {
+        val secretsFile = rootProject.file(".signing_secrets")
+        if (!secretsFile.exists()) {
+            throw GradleException("Missing .signing_secrets in project root")
+        }
+        secretsFile.inputStream().use(::load)
+    }
+
+    val storePasswordValue = signingSecrets.getProperty("STORE_PASSWORD")
+        ?: throw GradleException("STORE_PASSWORD missing in .signing_secrets")
+    val keyPasswordValue = signingSecrets.getProperty("KEY_PASSWORD")
+        ?: throw GradleException("KEY_PASSWORD missing in .signing_secrets")
+
+    signingConfigs {
+        create("release") {
+            storeFile = rootProject.file("release.keystore")
+            storePassword = storePasswordValue
+            keyAlias = "key0"
+            keyPassword = keyPasswordValue
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.getByName("release")
+        }
     }
 
     buildFeatures {
