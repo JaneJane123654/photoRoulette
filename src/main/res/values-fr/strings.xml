@@ -25,7 +25,7 @@
     <string name="default_behavior_line_left_delete">Left swipe: delete photo</string>
     <string name="default_behavior_line_delete_prerequisite">Delete requires &quot;Enable delete action&quot; in Settings. If it is off, delete gestures become next-photo swipes.</string>
     <string name="default_behavior_line_direct_delete">Want direct delete without Android confirmation? Turn on Silent delete in Settings.</string>
-    <string name="default_behavior_line_visibility_rule">Tip: this panel auto-hides after appearing 5 times in one month, and auto-enables again next month. If you manually turn it off in Settings, it stays off next month too.</string>
+    <string name="default_behavior_line_visibility_rule">Two-finger controls: pinch to zoom the photo and drag with two fingers to move it inside the card while the card stays fixed. Tip: this panel auto-hides after appearing 5 times in one month, and auto-enables again next month. If you manually turn it off in Settings, it stays off next month too.</string>
     <string name="default_behavior_collapsed_hint">Tap to expand default controls</string>
     <string name="default_behavior_expand">Expand default controls</string>
     <string name="default_behavior_collapse">Collapse default controls</string>
@@ -84,7 +84,7 @@
     <string name="settings_section_update">Update</string>
 
     <string name="usage_guide_title">How to use quickly</string>
-    <string name="usage_guide_line_one">1) Shuffle: swipe cards by your configured directions, or use the gesture floating ball when enabled.</string>
+    <string name="usage_guide_line_one">1) Mélange : balayez les cartes selon vos directions configurées ; sur la carte du dessus, utilisez deux doigts pour zoomer et déplacer la photo dans le cadre fixe ; ou utilisez la boule gestuelle si elle est activée.</string>
     <string name="usage_guide_line_two">2) Deletion: first turn on &quot;Enable delete action&quot;. Without it, all delete gestures become next-photo.</string>
     <string name="usage_guide_line_three">3) Silent delete: turn it on, then authorize both DCIM and Pictures. We open each parent folder directly for quick setup.</string>
     <string name="usage_guide_line_four">4) If card movement feels off, tap Reshuffle once to rebuild the deck and continue smoothly.</string>

@@ -32,7 +32,7 @@
     <string name="default_behavior_line_left_delete">سحب لليسار: حذف الصورة</string>
     <string name="default_behavior_line_delete_prerequisite">الحذف يتطلب تفعيل "تفعيل إجراء الحذف" من الإعدادات. إذا كان مغلقاً، تتحول كل حركات الحذف إلى الانتقال للصورة التالية.</string>
     <string name="default_behavior_line_direct_delete">تريد الحذف المباشر دون تأكيد Android؟ فعّل الحذف الصامت من الإعدادات.</string>
-    <string name="default_behavior_line_visibility_rule">ملاحظة: يتم إخفاء هذا اللوح تلقائياً بعد ظهوره 5 مرات خلال شهر واحد، ويُعاد تفعيله تلقائياً في الشهر التالي. إذا أوقفته يدوياً من الإعدادات، سيبقى متوقفاً في الشهر التالي أيضاً.</string>
+    <string name="default_behavior_line_visibility_rule">تحكم بإصبعين: قرّب/بعّد بإصبعين لتكبير الصورة، واسحبها بإصبعين داخل البطاقة بينما تبقى البطاقة نفسها ثابتة. ملاحظة: يتم إخفاء هذا اللوح تلقائياً بعد ظهوره 5 مرات خلال شهر واحد، ويُعاد تفعيله تلقائياً في الشهر التالي. إذا أوقفته يدوياً من الإعدادات، سيبقى متوقفاً في الشهر التالي أيضاً.</string>
     <string name="default_behavior_collapsed_hint">اضغط لتوسيع الإرشادات الافتراضية</string>
     <string name="default_behavior_expand">توسيع الإرشادات الافتراضية</string>
     <string name="default_behavior_collapse">طي الإرشادات الافتراضية</string>
@@ -87,7 +87,7 @@
     <string name="settings_section_update">التحديث</string>
 
     <string name="usage_guide_title">طريقة الاستخدام بسرعة</string>
-    <string name="usage_guide_line_one">1) الخلط: اسحب البطاقات حسب إعداداتك، أو استخدم كرة الإيماءات عند تفعيلها.</string>
+    <string name="usage_guide_line_one">1) الخلط: اسحب البطاقات حسب إعداداتك؛ وعلى البطاقة العلوية استخدم إصبعين للتكبير وتحريك الصورة داخل إطار البطاقة الثابت؛ أو استخدم كرة الإيماءات عند تفعيلها.</string>
     <string name="usage_guide_line_two">2) الحذف: فعّل أولاً "تفعيل إجراء الحذف". بدونه تتحول كل إجراءات الحذف إلى الصورة التالية.</string>
     <string name="usage_guide_line_three">3) الحذف الصامت: فعّله ثم صرّح DCIM وPictures. نفتح المجلد الأب مباشرة لتسريع الإعداد.</string>
     <string name="usage_guide_line_four">4) إذا بدا تحرّك البطاقات غير سلس، اضغط "إعادة خلط" مرة واحدة لإعادة بناء المجموعة.</string>

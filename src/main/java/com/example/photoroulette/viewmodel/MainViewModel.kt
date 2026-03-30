@@ -119,6 +119,18 @@ class MainViewModel(
     )
     val gestureBallSizeScale: StateFlow<Float> = _gestureBallSizeScale.asStateFlow()
 
+    private val _isGestureBallFeedbackEnabled = MutableStateFlow(
+        savedStateHandle[KEY_IS_GESTURE_BALL_FEEDBACK_ENABLED]
+            ?: SettingsRepository.DEFAULT_GESTURE_BALL_FEEDBACK_ENABLED,
+    )
+    val isGestureBallFeedbackEnabled: StateFlow<Boolean> = _isGestureBallFeedbackEnabled.asStateFlow()
+
+    private val _showGestureBallActionHint = MutableStateFlow(
+        savedStateHandle[KEY_SHOW_GESTURE_BALL_ACTION_HINT]
+            ?: SettingsRepository.DEFAULT_GESTURE_BALL_ACTION_HINT_ENABLED,
+    )
+    val showGestureBallActionHint: StateFlow<Boolean> = _showGestureBallActionHint.asStateFlow()
+
     private val _isSilentDeleteEnabled = MutableStateFlow(
         savedStateHandle[KEY_IS_SILENT_DELETE_ENABLED] ?: false,
     )
@@ -229,6 +241,20 @@ class MainViewModel(
             settingsRepository.gestureBallSizeScale.collect { scale ->
                 _gestureBallSizeScale.value = scale
                 savedStateHandle[KEY_GESTURE_BALL_SIZE_SCALE] = scale
+            }
+        }
+
+        scope.launch {
+            settingsRepository.isGestureBallFeedbackEnabled.collect { enabled ->
+                _isGestureBallFeedbackEnabled.value = enabled
+                savedStateHandle[KEY_IS_GESTURE_BALL_FEEDBACK_ENABLED] = enabled
+            }
+        }
+
+        scope.launch {
+            settingsRepository.showGestureBallActionHint.collect { enabled ->
+                _showGestureBallActionHint.value = enabled
+                savedStateHandle[KEY_SHOW_GESTURE_BALL_ACTION_HINT] = enabled
             }
         }
 
@@ -521,6 +547,18 @@ class MainViewModel(
     fun setGestureBallSizeScale(scale: Float) {
         scope.launch(ioDispatcher) {
             settingsRepository.setGestureBallSizeScale(scale)
+        }
+    }
+
+    fun setGestureBallFeedbackEnabled(enabled: Boolean) {
+        scope.launch(ioDispatcher) {
+            settingsRepository.setGestureBallFeedbackEnabled(enabled)
+        }
+    }
+
+    fun setShowGestureBallActionHint(enabled: Boolean) {
+        scope.launch(ioDispatcher) {
+            settingsRepository.setShowGestureBallActionHint(enabled)
         }
     }
 
@@ -1059,6 +1097,8 @@ class MainViewModel(
         const val KEY_SHOW_FLOATING_DELETE_BUTTON = "show_floating_delete_button"
         const val KEY_IS_GESTURE_BALL_ENABLED = "is_gesture_ball_enabled"
         const val KEY_GESTURE_BALL_SIZE_SCALE = "gesture_ball_size_scale"
+        const val KEY_IS_GESTURE_BALL_FEEDBACK_ENABLED = "is_gesture_ball_feedback_enabled"
+        const val KEY_SHOW_GESTURE_BALL_ACTION_HINT = "show_gesture_ball_action_hint"
         const val KEY_IS_SILENT_DELETE_ENABLED = "is_silent_delete_enabled"
         const val KEY_SILENT_DELETE_TREE_URIS = "silent_delete_tree_uris"
         const val KEY_SILENT_DELETE_TREE_URI = "silent_delete_tree_uri"

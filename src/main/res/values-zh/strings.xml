@@ -25,7 +25,7 @@
     <string name="default_behavior_line_left_delete">左滑：删除图片</string>
     <string name="default_behavior_line_delete_prerequisite">删除前提：必须先在设置里打开“启用删除操作”。如果没打开，所有删除手势会自动变成“下一张图片”。</string>
     <string name="default_behavior_line_direct_delete">若不想弹出确认、希望直接删除，请在设置中开启“静默删除”。</string>
-    <string name="default_behavior_line_visibility_rule">提示：默认操作说明在一个月内累计出现 5 次后，会在当月自动关闭，下个月自动恢复开启；如果是你在设置中手动关闭，下个月也不会自动开启。</string>
+    <string name="default_behavior_line_visibility_rule">双指操作：双指捏合可缩放图片，双指拖动可在卡片内移动图片，卡片本身保持不动；单击图片可恢复原始大小。提示：默认操作说明在一个月内累计出现 5 次后，会在当月自动关闭，下个月自动恢复开启；如果是你在设置中手动关闭，下个月也不会自动开启。</string>
     <string name="default_behavior_collapsed_hint">点按可展开默认操作说明</string>
     <string name="default_behavior_expand">展开默认操作说明</string>
     <string name="default_behavior_collapse">折叠默认操作说明</string>
@@ -50,6 +50,12 @@
     <string name="gesture_ball_enabled_description">已开启。从中心滑向彩色环会预览动作，松手后才执行。按住中心即可拖动位置。</string>
     <string name="gesture_ball_disabled_description">默认关闭，仅使用常规滑动卡片操作。</string>
     <string name="gesture_ball_size_label">悬浮球大小：%1$d%%</string>
+    <string name="gesture_ball_feedback_title">手势悬浮球操作声音</string>
+    <string name="gesture_ball_feedback_enabled_description">已开启。长按拖动与目标动作切换时会播放反馈。</string>
+    <string name="gesture_ball_feedback_disabled_description">已关闭。操作手势悬浮球时不播放反馈。</string>
+    <string name="gesture_ball_hint_title">手势悬浮球操作提示</string>
+    <string name="gesture_ball_hint_enabled_description">已开启。拖动时会显示顶部操作提示文案。</string>
+    <string name="gesture_ball_hint_disabled_description">已关闭。不显示顶部操作提示文案。</string>
     <string name="gesture_ball_preview_execute">松手后执行：%1$s</string>
     <string name="gesture_ball_preview_unavailable">当前无法执行：%1$s</string>
     <string name="silent_delete_title">静默删除</string>
@@ -84,7 +90,7 @@
     <string name="settings_section_update">更新</string>
 
     <string name="usage_guide_title">快速上手</string>
-    <string name="usage_guide_line_one">1）浏览：按你配置的方向滑动卡片；开启手势悬浮球后也可通过悬浮球执行动作。</string>
+    <string name="usage_guide_line_one">1）浏览：按你配置的方向滑动卡片；在顶部卡片上可用双指捏合缩放图片并双指拖动移动图片（卡片不动），单击可恢复原始大小；开启手势悬浮球后也可通过悬浮球执行动作。</string>
     <string name="usage_guide_line_two">2）删除：必须先开启“启用删除操作”。未开启时，所有删除动作会自动变成“下一张图片”。</string>
     <string name="usage_guide_line_three">3）静默删除：开启后请分别授权 DCIM 与 Pictures 父目录，以覆盖更多截图与相机路径。</string>
     <string name="usage_guide_line_four">4）若偶发卡顿，先点一次“重新打乱”重建卡组，再继续滑动。</string>

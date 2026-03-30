@@ -31,6 +31,8 @@ class SettingsRepository(
         val ShowFullImage = booleanPreferencesKey("show_full_image")
         val ShowFloatingDeleteButton = booleanPreferencesKey("show_floating_delete_button")
         val EnableGestureBall = booleanPreferencesKey("enable_gesture_ball")
+        val EnableGestureBallFeedback = booleanPreferencesKey("enable_gesture_ball_feedback")
+        val ShowGestureBallActionHint = booleanPreferencesKey("show_gesture_ball_action_hint")
         val GestureBallSizeScale = floatPreferencesKey("gesture_ball_size_scale")
         val SilentDeleteTreeUris = stringSetPreferencesKey("silent_delete_tree_uris")
         val SilentDeleteTreeUri = stringPreferencesKey("silent_delete_tree_uri")
@@ -105,6 +107,30 @@ class SettingsRepository(
             preferences[Keys.GestureBallSizeScale]
                 ?.coerceIn(MIN_GESTURE_BALL_SIZE_SCALE, MAX_GESTURE_BALL_SIZE_SCALE)
                 ?: DEFAULT_GESTURE_BALL_SIZE_SCALE
+        }
+
+    val isGestureBallFeedbackEnabled: Flow<Boolean> = appContext.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[Keys.EnableGestureBallFeedback] ?: DEFAULT_GESTURE_BALL_FEEDBACK_ENABLED
+        }
+
+    val showGestureBallActionHint: Flow<Boolean> = appContext.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[Keys.ShowGestureBallActionHint] ?: DEFAULT_GESTURE_BALL_ACTION_HINT_ENABLED
         }
 
     val appLanguageTag: Flow<String> = appContext.dataStore.data
@@ -260,6 +286,18 @@ class SettingsRepository(
         }
     }
 
+    suspend fun setGestureBallFeedbackEnabled(enabled: Boolean) {
+        appContext.dataStore.edit { preferences ->
+            preferences[Keys.EnableGestureBallFeedback] = enabled
+        }
+    }
+
+    suspend fun setShowGestureBallActionHint(enabled: Boolean) {
+        appContext.dataStore.edit { preferences ->
+            preferences[Keys.ShowGestureBallActionHint] = enabled
+        }
+    }
+
     suspend fun setSilentDeleteEnabled(enabled: Boolean) {
         appContext.dataStore.edit { preferences ->
             preferences[Keys.EnableSilentDelete] = enabled
@@ -398,6 +436,8 @@ class SettingsRepository(
         const val MIN_GESTURE_BALL_SIZE_SCALE = 0.78f
         const val MAX_GESTURE_BALL_SIZE_SCALE = 1.38f
         const val DEFAULT_GESTURE_BALL_SIZE_SCALE = 1f
+        const val DEFAULT_GESTURE_BALL_FEEDBACK_ENABLED = true
+        const val DEFAULT_GESTURE_BALL_ACTION_HINT_ENABLED = true
 
         val DEFAULT_LEFT_ACTION = SwipeAction.Delete
         val DEFAULT_RIGHT_ACTION = SwipeAction.Next

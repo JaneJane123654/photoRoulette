@@ -1,6 +1,11 @@
 package com.example.photoroulette.ui.screens
 
 import android.view.HapticFeedbackConstants
+import android.view.SoundEffectConstants
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.VectorConverter
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Canvas
@@ -8,7 +13,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateCentroid
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -56,13 +65,16 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -108,6 +120,9 @@ import com.example.photoroulette.viewmodel.states.HomeUiState
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 
 @Composable
 fun MainScreen(
@@ -127,6 +142,8 @@ fun MainScreen(
     val showFloatingDeleteButton by viewModel.showFloatingDeleteButton.collectAsStateWithLifecycle()
     val isGestureBallEnabled by viewModel.isGestureBallEnabled.collectAsStateWithLifecycle()
     val gestureBallSizeScale by viewModel.gestureBallSizeScale.collectAsStateWithLifecycle()
+    val isGestureBallFeedbackEnabled by viewModel.isGestureBallFeedbackEnabled.collectAsStateWithLifecycle()
+    val showGestureBallActionHint by viewModel.showGestureBallActionHint.collectAsStateWithLifecycle()
     val isSilentDeleteEnabled by viewModel.isSilentDeleteEnabled.collectAsStateWithLifecycle()
     val silentDeleteTreeUris by viewModel.silentDeleteTreeUris.collectAsStateWithLifecycle()
     val swipeLeftAction by viewModel.swipeLeftAction.collectAsStateWithLifecycle()
@@ -159,6 +176,8 @@ fun MainScreen(
         showFloatingDeleteButton = showFloatingDeleteButton,
         isGestureBallEnabled = isGestureBallEnabled,
         gestureBallSizeScale = gestureBallSizeScale,
+        isGestureBallFeedbackEnabled = isGestureBallFeedbackEnabled,
+        showGestureBallActionHint = showGestureBallActionHint,
         isSilentDeleteEnabled = isSilentDeleteEnabled,
         silentDeleteDcimLabel = silentDeleteDcimLabel,
         silentDeletePicturesLabel = silentDeletePicturesLabel,
@@ -182,6 +201,8 @@ fun MainScreen(
         onShowFloatingDeleteButtonChange = viewModel::setShowFloatingDeleteButton,
         onGestureBallEnabledChange = viewModel::setGestureBallEnabled,
         onGestureBallSizeScaleChange = viewModel::setGestureBallSizeScale,
+        onGestureBallFeedbackEnabledChange = viewModel::setGestureBallFeedbackEnabled,
+        onShowGestureBallActionHintChange = viewModel::setShowGestureBallActionHint,
         onSilentDeleteEnabledChange = viewModel::setSilentDeleteEnabled,
         onConfigureSilentDeleteDcimDirectory = {
             viewModel.requestSilentDeleteDirectorySelection(SilentDeleteScope.Dcim)
@@ -220,6 +241,8 @@ private fun MainScreenContent(
     showFloatingDeleteButton: Boolean,
     isGestureBallEnabled: Boolean,
     gestureBallSizeScale: Float,
+    isGestureBallFeedbackEnabled: Boolean,
+    showGestureBallActionHint: Boolean,
     isSilentDeleteEnabled: Boolean,
     silentDeleteDcimLabel: String?,
     silentDeletePicturesLabel: String?,
@@ -243,6 +266,8 @@ private fun MainScreenContent(
     onShowFloatingDeleteButtonChange: (Boolean) -> Unit,
     onGestureBallEnabledChange: (Boolean) -> Unit,
     onGestureBallSizeScaleChange: (Float) -> Unit,
+    onGestureBallFeedbackEnabledChange: (Boolean) -> Unit,
+    onShowGestureBallActionHintChange: (Boolean) -> Unit,
     onSilentDeleteEnabledChange: (Boolean) -> Unit,
     onConfigureSilentDeleteDcimDirectory: () -> Unit,
     onConfigureSilentDeletePicturesDirectory: () -> Unit,
@@ -408,6 +433,8 @@ private fun MainScreenContent(
                     canSwipeNext = canSwipeNext,
                     isSwipeDeleteEnabled = isSwipeDeleteEnabled,
                     ballSizeScale = gestureBallSizeScale,
+                    isFeedbackEnabled = isGestureBallFeedbackEnabled,
+                    showActionHint = showGestureBallActionHint,
                     onSwipeAction = onSwipeAction,
                     modifier = Modifier.fillMaxSize(),
                 )
@@ -422,6 +449,8 @@ private fun MainScreenContent(
                     onDeleteClick = {
                         onSwipeAction(SwipeAction.Delete, topVisibleImageId)
                     },
+                    isGestureBallEnabled = isGestureBallEnabled,
+                    gestureBallSizeScale = gestureBallSizeScale,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -435,6 +464,8 @@ private fun MainScreenContent(
             showFloatingDeleteButton = showFloatingDeleteButton,
             isGestureBallEnabled = isGestureBallEnabled,
             gestureBallSizeScale = gestureBallSizeScale,
+            isGestureBallFeedbackEnabled = isGestureBallFeedbackEnabled,
+            showGestureBallActionHint = showGestureBallActionHint,
             isSilentDeleteEnabled = isSilentDeleteEnabled,
             silentDeleteDcimLabel = silentDeleteDcimLabel,
             silentDeletePicturesLabel = silentDeletePicturesLabel,
@@ -451,6 +482,8 @@ private fun MainScreenContent(
             onShowFloatingDeleteButtonChange = onShowFloatingDeleteButtonChange,
             onGestureBallEnabledChange = onGestureBallEnabledChange,
             onGestureBallSizeScaleChange = onGestureBallSizeScaleChange,
+            onGestureBallFeedbackEnabledChange = onGestureBallFeedbackEnabledChange,
+            onShowGestureBallActionHintChange = onShowGestureBallActionHintChange,
             onSilentDeleteEnabledChange = onSilentDeleteEnabledChange,
             onConfigureSilentDeleteDcimDirectory = onConfigureSilentDeleteDcimDirectory,
             onConfigureSilentDeletePicturesDirectory = onConfigureSilentDeletePicturesDirectory,
@@ -808,6 +841,8 @@ private fun SettingsDialog(
     showFloatingDeleteButton: Boolean,
     isGestureBallEnabled: Boolean,
     gestureBallSizeScale: Float,
+    isGestureBallFeedbackEnabled: Boolean,
+    showGestureBallActionHint: Boolean,
     isSilentDeleteEnabled: Boolean,
     silentDeleteDcimLabel: String?,
     silentDeletePicturesLabel: String?,
@@ -825,6 +860,8 @@ private fun SettingsDialog(
     onShowFloatingDeleteButtonChange: (Boolean) -> Unit,
     onGestureBallEnabledChange: (Boolean) -> Unit,
     onGestureBallSizeScaleChange: (Float) -> Unit,
+    onGestureBallFeedbackEnabledChange: (Boolean) -> Unit,
+    onShowGestureBallActionHintChange: (Boolean) -> Unit,
     onSilentDeleteEnabledChange: (Boolean) -> Unit,
     onConfigureSilentDeleteDcimDirectory: () -> Unit,
     onConfigureSilentDeletePicturesDirectory: () -> Unit,
@@ -893,8 +930,12 @@ private fun SettingsDialog(
                 GestureBallControls(
                     isGestureBallEnabled = isGestureBallEnabled,
                     sizeScale = gestureBallSizeScale,
+                    isFeedbackEnabled = isGestureBallFeedbackEnabled,
+                    showActionHint = showGestureBallActionHint,
                     onCheckedChange = onGestureBallEnabledChange,
                     onSizeScaleChange = onGestureBallSizeScaleChange,
+                    onFeedbackEnabledChange = onGestureBallFeedbackEnabledChange,
+                    onActionHintEnabledChange = onShowGestureBallActionHintChange,
                 )
 
                 SettingsSectionTitle(text = stringResource(id = R.string.settings_section_delete))
@@ -1344,8 +1385,12 @@ private fun FloatingDeleteButtonControls(
 private fun GestureBallControls(
     isGestureBallEnabled: Boolean,
     sizeScale: Float,
+    isFeedbackEnabled: Boolean,
+    showActionHint: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     onSizeScaleChange: (Float) -> Unit,
+    onFeedbackEnabledChange: (Boolean) -> Unit,
+    onActionHintEnabledChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -1406,6 +1451,70 @@ private fun GestureBallControls(
                 valueRange = SettingsRepository.MIN_GESTURE_BALL_SIZE_SCALE..SettingsRepository.MAX_GESTURE_BALL_SIZE_SCALE,
                 enabled = isGestureBallEnabled,
             )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        text = stringResource(id = R.string.gesture_ball_feedback_title),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = if (isFeedbackEnabled) {
+                            stringResource(id = R.string.gesture_ball_feedback_enabled_description)
+                        } else {
+                            stringResource(id = R.string.gesture_ball_feedback_disabled_description)
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
+                Switch(
+                    checked = isFeedbackEnabled,
+                    onCheckedChange = onFeedbackEnabledChange,
+                    enabled = isGestureBallEnabled,
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        text = stringResource(id = R.string.gesture_ball_hint_title),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = if (showActionHint) {
+                            stringResource(id = R.string.gesture_ball_hint_enabled_description)
+                        } else {
+                            stringResource(id = R.string.gesture_ball_hint_disabled_description)
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
+                Switch(
+                    checked = showActionHint,
+                    onCheckedChange = onActionHintEnabledChange,
+                    enabled = isGestureBallEnabled,
+                )
+            }
         }
     }
 }
@@ -1413,13 +1522,25 @@ private fun GestureBallControls(
 @Composable
 private fun DraggableFloatingDeleteButton(
     onDeleteClick: () -> Unit,
+    isGestureBallEnabled: Boolean,
+    gestureBallSizeScale: Float,
     modifier: Modifier = Modifier,
 ) {
     val density = LocalDensity.current
-    val buttonSize = 54.dp
+    val buttonSize = FLOATING_DELETE_BUTTON_SIZE
     val margin = 18.dp
     val buttonSizePx = with(density) { buttonSize.toPx() }
+    val buttonRadiusPx = buttonSizePx / 2f
     val marginPx = with(density) { margin.toPx() }
+    val normalizedGestureBallSizeScale = gestureBallSizeScale.coerceIn(
+        SettingsRepository.MIN_GESTURE_BALL_SIZE_SCALE,
+        SettingsRepository.MAX_GESTURE_BALL_SIZE_SCALE,
+    )
+    val gestureBallRadiusPx = with(density) {
+        (GESTURE_BALL_BASE_OUTER_RADIUS * normalizedGestureBallSizeScale).toPx()
+    }
+    val gestureBallMarginPx = with(density) { GESTURE_BALL_MARGIN.toPx() }
+    val gestureBallClearancePx = with(density) { FLOATING_DELETE_BUTTON_GESTURE_BALL_CLEARANCE.toPx() }
 
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
     var offsetX by remember { mutableFloatStateOf(0f) }
@@ -1439,9 +1560,66 @@ private fun DraggableFloatingDeleteButton(
         return value.coerceIn(marginPx, maxY)
     }
 
+    fun clampCenter(target: Offset): Offset {
+        val minX = marginPx + buttonRadiusPx
+        val maxX = (containerSize.width.toFloat() - marginPx - buttonRadiusPx).coerceAtLeast(minX)
+        val minY = marginPx + buttonRadiusPx
+        val maxY = (containerSize.height.toFloat() - marginPx - buttonRadiusPx).coerceAtLeast(minY)
+        return Offset(
+            x = target.x.coerceIn(minX, maxX),
+            y = target.y.coerceIn(minY, maxY),
+        )
+    }
+
     if (!positioned && containerSize.width > 0 && containerSize.height > 0) {
-        offsetX = clampX(containerSize.width - buttonSizePx - marginPx)
-        offsetY = clampY(containerSize.height - buttonSizePx - marginPx)
+        val containerWidth = containerSize.width.toFloat()
+        val containerHeight = containerSize.height.toFloat()
+        val desiredCenter = clampCenter(
+            Offset(
+                x = containerWidth - marginPx - buttonRadiusPx,
+                y = containerHeight * FLOATING_DELETE_BUTTON_DEFAULT_CENTER_Y_RATIO,
+            ),
+        )
+        var initialCenter = desiredCenter
+
+        if (isGestureBallEnabled) {
+            val gestureBallCenter = Offset(
+                x = containerWidth - gestureBallRadiusPx - gestureBallMarginPx,
+                y = containerHeight * GESTURE_BALL_DEFAULT_CENTER_Y_RATIO,
+            )
+            val minimumSafeDistance = gestureBallRadiusPx + buttonRadiusPx + gestureBallClearancePx
+
+            if ((initialCenter - gestureBallCenter).getDistanceValue() < minimumSafeDistance) {
+                val preferredLowerCenter = clampCenter(
+                    Offset(
+                        x = initialCenter.x,
+                        y = gestureBallCenter.y + minimumSafeDistance,
+                    ),
+                )
+                val fallbackUpperCenter = clampCenter(
+                    Offset(
+                        x = initialCenter.x,
+                        y = gestureBallCenter.y - minimumSafeDistance,
+                    ),
+                )
+
+                initialCenter = when {
+                    (preferredLowerCenter - gestureBallCenter).getDistanceValue() >=
+                        minimumSafeDistance -> preferredLowerCenter
+
+                    (fallbackUpperCenter - gestureBallCenter).getDistanceValue() >=
+                        minimumSafeDistance -> fallbackUpperCenter
+
+                    abs(preferredLowerCenter.y - desiredCenter.y) <=
+                        abs(fallbackUpperCenter.y - desiredCenter.y) -> preferredLowerCenter
+
+                    else -> fallbackUpperCenter
+                }
+            }
+        }
+
+        offsetX = clampX(initialCenter.x - buttonRadiusPx)
+        offsetY = clampY(initialCenter.y - buttonRadiusPx)
         positioned = true
     }
 
@@ -1525,6 +1703,8 @@ private fun GestureBallOverlay(
     canSwipeNext: Boolean,
     isSwipeDeleteEnabled: Boolean,
     ballSizeScale: Float,
+    isFeedbackEnabled: Boolean,
+    showActionHint: Boolean,
     onSwipeAction: (SwipeAction, Long) -> Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -1534,10 +1714,10 @@ private fun GestureBallOverlay(
         SettingsRepository.MIN_GESTURE_BALL_SIZE_SCALE,
         SettingsRepository.MAX_GESTURE_BALL_SIZE_SCALE,
     )
-    val outerRadius = 62.dp * sizeScale
+    val outerRadius = GESTURE_BALL_BASE_OUTER_RADIUS * sizeScale
     val innerRadius = 30.dp * sizeScale
     val strokeWidth = 18.dp * sizeScale
-    val margin = 20.dp
+    val margin = GESTURE_BALL_MARGIN
     val outerRadiusPx = with(density) { outerRadius.toPx() }
     val innerRadiusPx = with(density) { innerRadius.toPx() }
     val strokeWidthPx = with(density) { strokeWidth.toPx() }
@@ -1572,7 +1752,7 @@ private fun GestureBallOverlay(
         center = clampCenter(
             target = Offset(
                 x = containerSize.width - outerRadiusPx - marginPx,
-                y = containerSize.height * 0.55f,
+                y = containerSize.height * GESTURE_BALL_DEFAULT_CENTER_Y_RATIO,
             ),
         )
         initialized = true
@@ -1646,6 +1826,7 @@ private fun GestureBallOverlay(
                         canSwipePrevious,
                         canSwipeNext,
                         isSwipeDeleteEnabled,
+                        isFeedbackEnabled,
                         outerRadiusPx,
                         innerRadiusPx,
                     ) {
@@ -1697,6 +1878,9 @@ private fun GestureBallOverlay(
                                     isRelocating = true
                                     hoveredSegment = null
                                     hostView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                                    if (isFeedbackEnabled) {
+                                        hostView.playSoundEffect(SoundEffectConstants.CLICK)
+                                    }
                                     lastContainerPointer = currentContainerPointer
                                 }
 
@@ -1724,6 +1908,9 @@ private fun GestureBallOverlay(
                                         hoveredSegment = nextHoveredSegment
                                         if (nextHoveredSegment != null) {
                                             hostView.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                            if (isFeedbackEnabled) {
+                                                hostView.playSoundEffect(SoundEffectConstants.CLICK)
+                                            }
                                         }
                                     }
                                 }
@@ -1780,7 +1967,7 @@ private fun GestureBallOverlay(
                 )
             }
 
-            if (isDragging && previewAction != null) {
+            if (showActionHint && isDragging && previewAction != null) {
                 Surface(
                     modifier = Modifier
                         .align(Alignment.TopCenter)
@@ -2324,10 +2511,12 @@ private fun PhotoDeck(
 ) {
     var topCardDragProgress by remember { mutableFloatStateOf(0f) }
     var isTopCardForceFullImage by remember { mutableStateOf(false) }
+    var isTopCardImageGestureLocked by remember { mutableStateOf(false) }
 
     LaunchedEffect(visibleIds.firstOrNull()) {
         topCardDragProgress = 0f
         isTopCardForceFullImage = false
+        isTopCardImageGestureLocked = false
     }
 
     BoxWithConstraints(
@@ -2372,7 +2561,7 @@ private fun PhotoDeck(
                                 vertical = verticalInset,
                             )
                             .then(
-                                if (isTopCard) {
+                                if (isTopCard && !isTopCardImageGestureLocked) {
                                     Modifier.clickable {
                                         isTopCardForceFullImage = !isTopCardForceFullImage
                                     }
@@ -2381,7 +2570,7 @@ private fun PhotoDeck(
                                 }
                             )
                             .zIndex(cardZIndex),
-                        enabled = isTopCard,
+                        enabled = isTopCard && !isTopCardImageGestureLocked,
                         canSwipeLeft = isTopCard && canSwipeForAction(
                             action = swipeLeftAction,
                             canSwipePrevious = canSwipePrevious,
@@ -2426,6 +2615,12 @@ private fun PhotoDeck(
                         PhotoCardImage(
                             imageId = imageId,
                             showFullImage = if (isTopCard) topCardShowFullImage else showFullImage,
+                            enableTwoFingerTransform = isTopCard,
+                            onGestureLockChanged = if (isTopCard) {
+                                { isTopCardImageGestureLocked = it }
+                            } else {
+                                {}
+                            },
                         )
                     }
                 }
@@ -2438,9 +2633,12 @@ private fun PhotoDeck(
 private fun PhotoCardImage(
     imageId: Long,
     showFullImage: Boolean,
+    enableTwoFingerTransform: Boolean,
+    onGestureLockChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val gestureScope = rememberCoroutineScope()
     val request = remember(context, imageId) {
         ImageRequest.Builder(context)
             .data(IntentHelper.buildImageUri(imageId))
@@ -2449,14 +2647,122 @@ private fun PhotoCardImage(
     }
 
     var visualState by remember(imageId) { mutableStateOf(PhotoVisualState.Loading) }
+    var imageScale by remember(imageId) { mutableFloatStateOf(MIN_PHOTO_GESTURE_SCALE) }
+    var imageOffset by remember(imageId) { mutableStateOf(Offset.Zero) }
+    var containerSize by remember(imageId) { mutableStateOf(IntSize.Zero) }
+    var hasTwoFingerTransformActive by remember(imageId) { mutableStateOf(false) }
+    var resetTransformJob by remember(imageId) { mutableStateOf<Job?>(null) }
+    val currentOnGestureLockChanged by rememberUpdatedState(onGestureLockChanged)
     val placeholderPainter = ColorPainter(
         MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.24f),
     )
     val transparentPainter = remember { ColorPainter(Color.Transparent) }
 
+    fun clampImageOffset(target: Offset, scale: Float): Offset {
+        if (containerSize.width <= 0 || containerSize.height <= 0) {
+            return Offset.Zero
+        }
+
+        val maxX = (containerSize.width.toFloat() * (scale - 1f) / 2f).coerceAtLeast(0f)
+        val maxY = (containerSize.height.toFloat() * (scale - 1f) / 2f).coerceAtLeast(0f)
+
+        return Offset(
+            x = target.x.coerceIn(-maxX, maxX),
+            y = target.y.coerceIn(-maxY, maxY),
+        )
+    }
+
+    fun shouldLockCardGestures(
+        scale: Float,
+        offset: Offset,
+        hasTwoFingerGestureActive: Boolean,
+    ): Boolean {
+        return hasTwoFingerGestureActive ||
+            scale > MIN_PHOTO_GESTURE_SCALE + PHOTO_GESTURE_LOCK_SCALE_EPSILON ||
+            offset.getDistanceValue() > PHOTO_GESTURE_OFFSET_LOCK_EPSILON
+    }
+
+    fun cancelResetTransformAnimation() {
+        resetTransformJob?.cancel()
+        resetTransformJob = null
+    }
+
+    suspend fun animateResetTransform() {
+        val startScale = imageScale
+        val startOffset = imageOffset
+
+        if (
+            startScale <= MIN_PHOTO_GESTURE_SCALE + PHOTO_GESTURE_LOCK_SCALE_EPSILON &&
+            startOffset.getDistanceValue() <= PHOTO_GESTURE_OFFSET_LOCK_EPSILON
+        ) {
+            imageScale = MIN_PHOTO_GESTURE_SCALE
+            imageOffset = Offset.Zero
+            return
+        }
+
+        coroutineScope {
+            launch {
+                val scaleAnim = Animatable(startScale)
+                scaleAnim.animateTo(
+                    targetValue = MIN_PHOTO_GESTURE_SCALE,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMediumLow,
+                    ),
+                ) {
+                    imageScale = value
+                }
+            }
+
+            launch {
+                val offsetAnim = Animatable(
+                    initialValue = startOffset,
+                    typeConverter = Offset.VectorConverter,
+                )
+                offsetAnim.animateTo(
+                    targetValue = Offset.Zero,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioNoBouncy,
+                        stiffness = Spring.StiffnessMediumLow,
+                    ),
+                ) {
+                    imageOffset = value
+                }
+            }
+        }
+
+        imageScale = MIN_PHOTO_GESTURE_SCALE
+        imageOffset = Offset.Zero
+    }
+
+    val cardGestureLocked = shouldLockCardGestures(
+        scale = imageScale,
+        offset = imageOffset,
+        hasTwoFingerGestureActive = hasTwoFingerTransformActive,
+    )
+
+    val canTapToResetTransform =
+        imageScale > MIN_PHOTO_GESTURE_SCALE + PHOTO_GESTURE_LOCK_SCALE_EPSILON ||
+            imageOffset.getDistanceValue() > PHOTO_GESTURE_OFFSET_LOCK_EPSILON
+
+    LaunchedEffect(cardGestureLocked) {
+        currentOnGestureLockChanged(cardGestureLocked)
+    }
+
+    DisposableEffect(currentOnGestureLockChanged) {
+        onDispose {
+            cancelResetTransformAnimation()
+            currentOnGestureLockChanged(false)
+        }
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
+            .onSizeChanged { size ->
+                containerSize = size
+                imageOffset = clampImageOffset(imageOffset, imageScale)
+            }
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
@@ -2464,7 +2770,113 @@ private fun PhotoCardImage(
                         MaterialTheme.colorScheme.surfaceContainer,
                     ),
                 ),
-            ),
+            )
+            .pointerInput(enableTwoFingerTransform, imageId, containerSize) {
+                if (!enableTwoFingerTransform) {
+                    hasTwoFingerTransformActive = false
+                    return@pointerInput
+                }
+
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false)
+                    cancelResetTransformAnimation()
+                    hasTwoFingerTransformActive = false
+
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val activePointers = event.changes.count { it.pressed }
+                        if (activePointers == 0) {
+                            break
+                        }
+                        val shouldTransform =
+                            activePointers >= 2 &&
+                                containerSize.width > 0 &&
+                                containerSize.height > 0
+                        hasTwoFingerTransformActive = shouldTransform
+
+                        if (shouldTransform) {
+                            val zoomChange = event.calculateZoom()
+                            val panChange = event.calculatePan()
+                            val centroid = event.calculateCentroid(useCurrent = true)
+                            if (!zoomChange.isFinite() || zoomChange <= 0f || !centroid.isSpecified) {
+                                event.changes.forEach { change ->
+                                    if (change.pressed) {
+                                        change.consume()
+                                    }
+                                }
+                                continue
+                            }
+
+                            val currentScale = imageScale
+                            val rawNextScale = (currentScale * zoomChange).coerceIn(
+                                MIN_PHOTO_GESTURE_SCALE,
+                                MAX_PHOTO_GESTURE_SCALE,
+                            )
+                            val nextScale = if (
+                                rawNextScale <= MIN_PHOTO_GESTURE_SCALE + PHOTO_GESTURE_RESET_SNAP_EPSILON
+                            ) {
+                                MIN_PHOTO_GESTURE_SCALE
+                            } else {
+                                rawNextScale
+                            }
+                            val scaleRatio = if (currentScale > PHOTO_GESTURE_EPSILON) {
+                                nextScale / currentScale
+                            } else {
+                                1f
+                            }
+                            val containerCenter = Offset(
+                                x = containerSize.width / 2f,
+                                y = containerSize.height / 2f,
+                            )
+                            val nextOffset = if (
+                                nextScale <= MIN_PHOTO_GESTURE_SCALE + PHOTO_GESTURE_EPSILON
+                            ) {
+                                Offset.Zero
+                            } else {
+                                clampImageOffset(
+                                    target =
+                                        (imageOffset * scaleRatio) +
+                                            ((centroid - containerCenter) * (1f - scaleRatio)) +
+                                            panChange,
+                                    scale = nextScale,
+                                )
+                            }
+
+                            imageScale = nextScale
+                            imageOffset = nextOffset
+                            event.changes.forEach { change -> change.consume() }
+                        } else if (imageScale > MIN_PHOTO_GESTURE_SCALE + PHOTO_GESTURE_LOCK_SCALE_EPSILON) {
+                            event.changes.forEach { change ->
+                                if (change.positionChange() != Offset.Zero) {
+                                    change.consume()
+                                }
+                            }
+                        }
+                    }
+
+                    hasTwoFingerTransformActive = false
+                }
+            }
+            .pointerInput(enableTwoFingerTransform, canTapToResetTransform, imageId) {
+                if (!enableTwoFingerTransform || !canTapToResetTransform) {
+                    return@pointerInput
+                }
+
+                detectTapGestures(
+                    onTap = {
+                        cancelResetTransformAnimation()
+                        resetTransformJob = gestureScope.launch {
+                            animateResetTransform()
+                        }.also { job ->
+                            job.invokeOnCompletion {
+                                if (resetTransformJob == job) {
+                                    resetTransformJob = null
+                                }
+                            }
+                        }
+                    },
+                )
+            },
     ) {
         if (visualState != PhotoVisualState.Ready) {
             PhotoFallbackContent(
@@ -2476,7 +2888,14 @@ private fun PhotoCardImage(
         AsyncImage(
             model = request,
             contentDescription = stringResource(id = R.string.photo_content_description),
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    scaleX = imageScale
+                    scaleY = imageScale
+                    translationX = imageOffset.x
+                    translationY = imageOffset.y
+                },
             contentScale = if (showFullImage) ContentScale.Fit else ContentScale.Crop,
             placeholder = placeholderPainter,
             error = transparentPainter,
@@ -2577,8 +2996,20 @@ private fun canSwipeForAction(
 
 private const val CARD_ASPECT_RATIO = 0.72f
 private const val BACK_CARD_REVEAL_MULTIPLIER = 0.72f
+private const val MIN_PHOTO_GESTURE_SCALE = 1f
+private const val MAX_PHOTO_GESTURE_SCALE = 4f
+private const val PHOTO_GESTURE_EPSILON = 0.0001f
+private const val PHOTO_GESTURE_LOCK_SCALE_EPSILON = 0.02f
+private const val PHOTO_GESTURE_OFFSET_LOCK_EPSILON = 0.5f
+private const val PHOTO_GESTURE_RESET_SNAP_EPSILON = 0.03f
 private val CARD_LAYER_INSET = 12.dp
 private val MAX_DECK_WIDTH = 460.dp
+private val FLOATING_DELETE_BUTTON_SIZE = 54.dp
+private const val FLOATING_DELETE_BUTTON_DEFAULT_CENTER_Y_RATIO = 0.74f
+private val FLOATING_DELETE_BUTTON_GESTURE_BALL_CLEARANCE = 18.dp
+private val GESTURE_BALL_BASE_OUTER_RADIUS = 62.dp
+private val GESTURE_BALL_MARGIN = 20.dp
+private const val GESTURE_BALL_DEFAULT_CENTER_Y_RATIO = 0.55f
 private const val GESTURE_BALL_DRAG_CENTER_RATIO = 0.55f
 private const val GESTURE_BALL_HOLD_TO_DRAG_MS = 180L
 private const val DEFAULT_BEHAVIOR_NOTICE_AUTO_COLLAPSE_DELAY_MS = 5_000L
@@ -2604,6 +3035,8 @@ private fun MainScreenReadyPreview() {
             showFloatingDeleteButton = true,
             isGestureBallEnabled = true,
             gestureBallSizeScale = SettingsRepository.DEFAULT_GESTURE_BALL_SIZE_SCALE,
+            isGestureBallFeedbackEnabled = SettingsRepository.DEFAULT_GESTURE_BALL_FEEDBACK_ENABLED,
+            showGestureBallActionHint = SettingsRepository.DEFAULT_GESTURE_BALL_ACTION_HINT_ENABLED,
             isSilentDeleteEnabled = true,
             silentDeleteDcimLabel = "DCIM",
             silentDeletePicturesLabel = "Pictures",
@@ -2627,6 +3060,8 @@ private fun MainScreenReadyPreview() {
             onShowFloatingDeleteButtonChange = {},
             onGestureBallEnabledChange = {},
             onGestureBallSizeScaleChange = {},
+            onGestureBallFeedbackEnabledChange = {},
+            onShowGestureBallActionHintChange = {},
             onSilentDeleteEnabledChange = {},
             onConfigureSilentDeleteDcimDirectory = {},
             onConfigureSilentDeletePicturesDirectory = {},
@@ -2660,6 +3095,8 @@ private fun MainScreenPermissionPreview() {
             showFloatingDeleteButton = false,
             isGestureBallEnabled = false,
             gestureBallSizeScale = SettingsRepository.DEFAULT_GESTURE_BALL_SIZE_SCALE,
+            isGestureBallFeedbackEnabled = SettingsRepository.DEFAULT_GESTURE_BALL_FEEDBACK_ENABLED,
+            showGestureBallActionHint = SettingsRepository.DEFAULT_GESTURE_BALL_ACTION_HINT_ENABLED,
             isSilentDeleteEnabled = false,
             silentDeleteDcimLabel = null,
             silentDeletePicturesLabel = null,
@@ -2683,6 +3120,8 @@ private fun MainScreenPermissionPreview() {
             onShowFloatingDeleteButtonChange = {},
             onGestureBallEnabledChange = {},
             onGestureBallSizeScaleChange = {},
+            onGestureBallFeedbackEnabledChange = {},
+            onShowGestureBallActionHintChange = {},
             onSilentDeleteEnabledChange = {},
             onConfigureSilentDeleteDcimDirectory = {},
             onConfigureSilentDeletePicturesDirectory = {},

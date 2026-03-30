@@ -1,20 +1,13 @@
 # GitHub Repository Profile Copy (Bilingual)
 
-[English](#description--仓库简介短) | [中文](#description--仓库简介短)
+[中文](#description--仓库简介短) | [English](#description--仓库简介短)
 
 ## Description / 仓库简介（短）
 
-- EN: Gesture-first Android photo browser for random gallery review and fast cleanup.
 - 中文：一款手势优先的 Android 照片随机浏览与快速清理应用。
+- EN: Gesture-first Android photo browser for random gallery review and fast cleanup.
 
 ## About (Long) / About（长简介）
-
-### English
-
-Photo Roulette is an Android app that helps you quickly review and clean your photo library.
-It focuses on one-hand gestures, configurable swipe actions, and practical delete workflows.
-
-Use it to clean screenshots, review travel albums, and find memorable photos in random order.
 
 ### 中文
 
@@ -22,6 +15,13 @@ Use it to clean screenshots, review travel albums, and find memorable photos in 
 它强调单手手势操作、可配置滑动动作，以及实用的删除流程。
 
 你可以用它清理截图、回看旅行相册，也可以随机翻看旧照片。
+
+### English
+
+Photo Roulette is an Android app that helps you quickly review and clean your photo library.
+It focuses on one-hand gestures, configurable swipe actions, and practical delete workflows.
+
+Use it to clean screenshots, review travel albums, and find memorable photos in random order.
 
 ## Suggested Topics / 建议 Topics
 

@@ -32,7 +32,7 @@
     <string name="default_behavior_line_left_delete">Desliza izquierda: eliminar foto</string>
     <string name="default_behavior_line_delete_prerequisite">Eliminar requiere activar "Habilitar acción de eliminar" en Ajustes. Si está desactivado, los gestos de eliminar pasan a foto siguiente.</string>
     <string name="default_behavior_line_direct_delete">¿Quieres eliminar sin confirmación de Android? Activa Eliminación silenciosa en Ajustes.</string>
-    <string name="default_behavior_line_visibility_rule">Sugerencia: este panel se oculta automáticamente tras aparecer 5 veces en un mes y se vuelve a activar el mes siguiente. Si lo desactivas manualmente en Ajustes, seguirá apagado el mes siguiente.</string>
+    <string name="default_behavior_line_visibility_rule">Controles con dos dedos: pellizca para ampliar la foto y arrástrala con dos dedos dentro de la tarjeta, mientras la tarjeta permanece fija. Sugerencia: este panel se oculta automáticamente tras aparecer 5 veces en un mes y se vuelve a activar el mes siguiente. Si lo desactivas manualmente en Ajustes, seguirá apagado el mes siguiente.</string>
     <string name="default_behavior_collapsed_hint">Toca para expandir controles predeterminados</string>
     <string name="default_behavior_expand">Expandir controles predeterminados</string>
     <string name="default_behavior_collapse">Contraer controles predeterminados</string>
@@ -87,7 +87,7 @@
     <string name="settings_section_update">Actualización</string>
 
     <string name="usage_guide_title">Cómo usar rápidamente</string>
-    <string name="usage_guide_line_one">1) Barajar: desliza tarjetas según tu configuración, o usa la bola de gestos si está activada.</string>
+    <string name="usage_guide_line_one">1) Barajar: desliza tarjetas según tu configuración; en la tarjeta superior usa dos dedos para ampliar y mover la foto dentro del marco fijo; o usa la bola de gestos si está activada.</string>
     <string name="usage_guide_line_two">2) Eliminación: primero activa "Habilitar acción de eliminar". Sin eso, los gestos de eliminar pasan a foto siguiente.</string>
     <string name="usage_guide_line_three">3) Eliminación silenciosa: actívala y autoriza DCIM y Pictures. Abrimos cada carpeta padre para una configuración rápida.</string>
     <string name="usage_guide_line_four">4) Si el movimiento de tarjetas se siente extraño, toca Mezclar de nuevo una vez para reconstruir la baraja.</string>

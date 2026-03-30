@@ -5,7 +5,8 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,6 +29,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.stringResource
@@ -133,53 +135,115 @@ fun SwipeableCard(
                         canSwipeUp,
                         canSwipeDown,
                     ) {
-                        detectDragGestures(
-                            onDragStart = {
-                                settleJob?.cancel()
-                                isSettling = false
-                            },
-                            onDragEnd = {
-                                settleJob = scope.launch {
-                                    isSettling = true
+                        awaitEachGesture {
+                            val down = awaitFirstDown(requireUnconsumed = false)
+                            settleJob?.cancel()
+                            isSettling = false
 
-                                    val decision = resolveSwipeDecision(
+                            var activePointerId = down.id
+                            val touchSlop = viewConfiguration.touchSlop
+                            var accumulatedDrag = Offset.Zero
+                            var hasCrossedTouchSlop = false
+                            var hasDraggedCard = false
+                            var cancelledByMultiTouch = false
+
+                            fun applyDragDelta(rawDelta: Offset) {
+                                val dampedDeltaX = when {
+                                    rawDelta.x < 0f && !currentCanSwipeLeft -> {
+                                        rawDelta.x * BLOCKED_DIRECTION_DRAG_FRICTION
+                                    }
+
+                                    rawDelta.x > 0f && !currentCanSwipeRight -> {
+                                        rawDelta.x * BLOCKED_DIRECTION_DRAG_FRICTION
+                                    }
+
+                                    else -> rawDelta.x
+                                }
+
+                                val dampedDeltaY = when {
+                                    rawDelta.y < 0f && !currentCanSwipeUp -> {
+                                        rawDelta.y * BLOCKED_DIRECTION_DRAG_FRICTION
+                                    }
+
+                                    rawDelta.y > 0f && !currentCanSwipeDown -> {
+                                        rawDelta.y * BLOCKED_DIRECTION_DRAG_FRICTION
+                                    }
+
+                                    else -> rawDelta.y
+                                }
+
+                                offsetX += dampedDeltaX
+                                offsetY += dampedDeltaY
+                                hasDraggedCard = true
+
+                                reportDragProgress(
+                                    progress = calculateDragProgress(
                                         offsetX = offsetX,
                                         offsetY = offsetY,
                                         cardSize = cardSize,
-                                        canSwipeLeft = currentCanSwipeLeft,
-                                        canSwipeRight = currentCanSwipeRight,
-                                        canSwipeUp = currentCanSwipeUp,
-                                        canSwipeDown = currentCanSwipeDown,
-                                    )
+                                    ),
+                                )
+                            }
 
-                                    if (decision == null) {
-                                        animateCardTo(
-                                            startX = offsetX,
-                                            startY = offsetY,
-                                            targetX = 0f,
-                                            targetY = 0f,
-                                        ) { x, y ->
-                                            offsetX = x
-                                            offsetY = y
-                                            reportDragProgress(
-                                                progress = calculateDragProgress(
-                                                    offsetX = x,
-                                                    offsetY = y,
-                                                    cardSize = cardSize,
-                                                ),
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val pressedChanges = event.changes.filter { it.pressed }
+
+                                if (pressedChanges.isEmpty()) {
+                                    break
+                                }
+
+                                if (pressedChanges.size > 1) {
+                                    cancelledByMultiTouch = true
+                                    break
+                                }
+
+                                val activeChange = pressedChanges
+                                    .firstOrNull { it.id == activePointerId }
+                                    ?: pressedChanges.first().also { activePointerId = it.id }
+
+                                val delta = activeChange.positionChange()
+                                if (delta != Offset.Zero) {
+                                    if (!hasCrossedTouchSlop) {
+                                        accumulatedDrag += delta
+                                        val dragDistance = hypot(
+                                            accumulatedDrag.x.toDouble(),
+                                            accumulatedDrag.y.toDouble(),
+                                        ).toFloat()
+
+                                        if (dragDistance >= touchSlop) {
+                                            hasCrossedTouchSlop = true
+                                            val directionX = accumulatedDrag.x / dragDistance
+                                            val directionY = accumulatedDrag.y / dragDistance
+                                            val overSlop = Offset(
+                                                x = accumulatedDrag.x - (directionX * touchSlop),
+                                                y = accumulatedDrag.y - (directionY * touchSlop),
                                             )
+                                            applyDragDelta(overSlop)
+                                            accumulatedDrag = Offset.Zero
                                         }
-                                        isSettling = false
-                                        settleJob = null
-                                        return@launch
+                                    } else {
+                                        applyDragDelta(delta)
                                     }
 
+                                    activeChange.consume()
+                                }
+                            }
+
+                            if (!hasDraggedCard) {
+                                reportDragProgress(0f, force = true)
+                                return@awaitEachGesture
+                            }
+
+                            settleJob = scope.launch {
+                                isSettling = true
+
+                                if (cancelledByMultiTouch) {
                                     animateCardTo(
                                         startX = offsetX,
                                         startY = offsetY,
-                                        targetX = decision.targetX,
-                                        targetY = decision.targetY,
-                                        forDismiss = true,
+                                        targetX = 0f,
+                                        targetY = 0f,
                                     ) { x, y ->
                                         offsetX = x
                                         offsetY = y
@@ -192,37 +256,22 @@ fun SwipeableCard(
                                         )
                                     }
 
-                                    val handled = currentOnSwiped(decision.direction)
-                                    if (!handled) {
-                                        animateCardTo(
-                                            startX = offsetX,
-                                            startY = offsetY,
-                                            targetX = 0f,
-                                            targetY = 0f,
-                                        ) { x, y ->
-                                            offsetX = x
-                                            offsetY = y
-                                            reportDragProgress(
-                                                progress = calculateDragProgress(
-                                                    offsetX = x,
-                                                    offsetY = y,
-                                                    cardSize = cardSize,
-                                                ),
-                                            )
-                                        }
-                                    } else {
-                                        offsetX = 0f
-                                        offsetY = 0f
-                                        reportDragProgress(0f, force = true)
-                                    }
-
                                     isSettling = false
                                     settleJob = null
+                                    return@launch
                                 }
-                            },
-                            onDragCancel = {
-                                settleJob = scope.launch {
-                                    isSettling = true
+
+                                val decision = resolveSwipeDecision(
+                                    offsetX = offsetX,
+                                    offsetY = offsetY,
+                                    cardSize = cardSize,
+                                    canSwipeLeft = currentCanSwipeLeft,
+                                    canSwipeRight = currentCanSwipeRight,
+                                    canSwipeUp = currentCanSwipeUp,
+                                    canSwipeDown = currentCanSwipeDown,
+                                )
+
+                                if (decision == null) {
                                     animateCardTo(
                                         startX = offsetX,
                                         startY = offsetY,
@@ -241,47 +290,55 @@ fun SwipeableCard(
                                     }
                                     isSettling = false
                                     settleJob = null
-                                }
-                            },
-                            onDrag = { change, dragAmount ->
-                                change.consume()
-
-                                val dampedDeltaX = when {
-                                    dragAmount.x < 0f && !currentCanSwipeLeft -> {
-                                        dragAmount.x * BLOCKED_DIRECTION_DRAG_FRICTION
-                                    }
-
-                                    dragAmount.x > 0f && !currentCanSwipeRight -> {
-                                        dragAmount.x * BLOCKED_DIRECTION_DRAG_FRICTION
-                                    }
-
-                                    else -> dragAmount.x
+                                    return@launch
                                 }
 
-                                val dampedDeltaY = when {
-                                    dragAmount.y < 0f && !currentCanSwipeUp -> {
-                                        dragAmount.y * BLOCKED_DIRECTION_DRAG_FRICTION
-                                    }
-
-                                    dragAmount.y > 0f && !currentCanSwipeDown -> {
-                                        dragAmount.y * BLOCKED_DIRECTION_DRAG_FRICTION
-                                    }
-
-                                    else -> dragAmount.y
+                                animateCardTo(
+                                    startX = offsetX,
+                                    startY = offsetY,
+                                    targetX = decision.targetX,
+                                    targetY = decision.targetY,
+                                    forDismiss = true,
+                                ) { x, y ->
+                                    offsetX = x
+                                    offsetY = y
+                                    reportDragProgress(
+                                        progress = calculateDragProgress(
+                                            offsetX = x,
+                                            offsetY = y,
+                                            cardSize = cardSize,
+                                        ),
+                                    )
                                 }
 
-                                offsetX += dampedDeltaX
-                                offsetY += dampedDeltaY
+                                val handled = currentOnSwiped(decision.direction)
+                                if (!handled) {
+                                    animateCardTo(
+                                        startX = offsetX,
+                                        startY = offsetY,
+                                        targetX = 0f,
+                                        targetY = 0f,
+                                    ) { x, y ->
+                                        offsetX = x
+                                        offsetY = y
+                                        reportDragProgress(
+                                            progress = calculateDragProgress(
+                                                offsetX = x,
+                                                offsetY = y,
+                                                cardSize = cardSize,
+                                            ),
+                                        )
+                                    }
+                                } else {
+                                    offsetX = 0f
+                                    offsetY = 0f
+                                    reportDragProgress(0f, force = true)
+                                }
 
-                                reportDragProgress(
-                                    progress = calculateDragProgress(
-                                        offsetX = offsetX,
-                                        offsetY = offsetY,
-                                        cardSize = cardSize,
-                                    ),
-                                )
-                            },
-                        )
+                                isSettling = false
+                                settleJob = null
+                            }
+                        }
                     }
                 } else {
                     Modifier

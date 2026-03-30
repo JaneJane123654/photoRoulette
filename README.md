@@ -1,40 +1,6 @@
-# Photo Roulette / 照片轮盘
+# 照片轮盘 / Photo Roulette
 
-[English](#english) | [中文](#中文)
-
-## English
-
-Photo Roulette is a lightweight Android app for quickly browsing your gallery with one-hand gestures.
-
-### Best Use Cases
-
-- Clean up screenshot folders during short breaks.
-- Quickly review travel photos and remove low-quality shots.
-- Shuffle through old memories for random inspiration.
-- Decide what to keep before cloud backup.
-
-### Core Features
-
-- Random photo deck browsing with configurable swipe actions.
-- Delete protection mode and optional silent delete for authorized folders.
-- Gesture floating ball and floating delete button.
-- Multi-language UI (English, Chinese, Arabic, Spanish, French, Russian).
-- Smart default-control guide visibility:
-  - Auto-hides after appearing 5 times within the same month.
-  - Automatically re-enables next month if it was auto-hidden.
-  - Stays off next month if user turned it off manually.
-- GitHub Release based update check:
-  - Checks on app launch.
-  - Supports "remind me when a newer version than this one exists".
-  - Manual "Check updates" button in Settings.
-
-### Privacy
-
-- All photo operations happen on-device.
-- No cloud upload.
-- Access scope follows Android permission system.
-
----
+[中文](#中文) | [English](#english)
 
 ## 中文
 
@@ -67,3 +33,37 @@ Photo Roulette is a lightweight Android app for quickly browsing your gallery wi
 - 所有照片处理都在本地完成。
 - 不上传云端。
 - 权限范围严格遵循 Android 系统授权。
+
+---
+
+## English
+
+Photo Roulette is a lightweight Android app for quickly browsing your gallery with one-hand gestures.
+
+### Best Use Cases
+
+- Clean up screenshot folders during short breaks.
+- Quickly review travel photos and remove low-quality shots.
+- Shuffle through old memories for random inspiration.
+- Decide what to keep before cloud backup.
+
+### Core Features
+
+- Random photo deck browsing with configurable swipe actions.
+- Delete protection mode and optional silent delete for authorized folders.
+- Gesture floating ball and floating delete button.
+- Multi-language UI (English, Chinese, Arabic, Spanish, French, Russian).
+- Smart default-control guide visibility:
+  - Auto-hides after appearing 5 times within the same month.
+  - Automatically re-enables next month if it was auto-hidden.
+  - Stays off next month if user turned it off manually.
+- GitHub Release based update check:
+  - Checks on app launch.
+  - Supports "remind me when a newer version than this one exists".
+  - Manual "Check updates" button in Settings.
+
+### Privacy
+
+- All photo operations happen on-device.
+- No cloud upload.
+- Access scope follows Android permission system.
