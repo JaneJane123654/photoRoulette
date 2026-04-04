@@ -25,6 +25,8 @@
     <string name="default_behavior_line_left_delete">Left swipe: delete photo</string>
     <string name="default_behavior_line_delete_prerequisite">Delete requires "Enable delete action" in Settings. If it is off, delete gestures become next-photo swipes.</string>
     <string name="default_behavior_line_direct_delete">Want direct delete without Android confirmation? Turn on Silent delete in Settings.</string>
+    <string name="default_behavior_line_tap_toggle">Single tap photo: toggle card full-image mode (you can disable this in Settings).</string>
+    <string name="default_behavior_line_delete_delay">Delete reminder can appear slightly later after a left swipe, because Android deletion needs a short moment to finish.</string>
     <string name="default_behavior_line_visibility_rule">Two-finger controls: pinch to zoom the photo and drag with two fingers to move it inside the card. The card frame stays fixed, and a single tap resets zoom back to the original size. Tip: this panel auto-hides after appearing 5 times in one month, and auto-enables again next month. If you manually turn it off in Settings, it stays off next month too.</string>
     <string name="default_behavior_collapsed_hint">Tap to expand default controls</string>
     <string name="default_behavior_expand">Expand default controls</string>
@@ -47,6 +49,9 @@
     <string name="show_full_image_title">Show full image in card</string>
     <string name="show_full_image_enabled_description">Enabled. Cards keep the entire photo visible with blank margins if needed.</string>
     <string name="show_full_image_disabled_description">Disabled (default). Cards use crop-fill for a fuller edge-to-edge look.</string>
+    <string name="tap_image_toggle_title">Tap to toggle full image</string>
+    <string name="tap_image_toggle_enabled_description">Enabled. Tapping the top photo switches between crop-fill and full-image display.</string>
+    <string name="tap_image_toggle_disabled_description">Disabled. Tapping the top photo does not switch display mode.</string>
     <string name="floating_delete_button_title">Floating delete button</string>
     <string name="floating_delete_button_enabled_description">Enabled. A small red delete button appears at the lower-right and can be dragged after long-press.</string>
     <string name="floating_delete_button_disabled_description">Disabled by default. No floating delete button is shown.</string>

@@ -25,6 +25,8 @@
     <string name="default_behavior_line_left_delete">左滑：删除图片</string>
     <string name="default_behavior_line_delete_prerequisite">删除前提：必须先在设置里打开“启用删除操作”。如果没打开，所有删除手势会自动变成“下一张图片”。</string>
     <string name="default_behavior_line_direct_delete">若不想弹出确认、希望直接删除，请在设置中开启“静默删除”。</string>
+    <string name="default_behavior_line_tap_toggle">单击图片：切换卡片完整展示模式（可在设置中关闭该行为）。</string>
+    <string name="default_behavior_line_delete_delay">左滑后删除提醒可能会稍有延迟，这是 Android 删除流程需要一点时间，属于正常现象。</string>
     <string name="default_behavior_line_visibility_rule">双指操作：双指捏合可缩放图片，双指拖动可在卡片内移动图片，卡片本身保持不动；单击图片可恢复原始大小。提示：默认操作说明在一个月内累计出现 5 次后，会在当月自动关闭，下个月自动恢复开启；如果是你在设置中手动关闭，下个月也不会自动开启。</string>
     <string name="default_behavior_collapsed_hint">点按可展开默认操作说明</string>
     <string name="default_behavior_expand">展开默认操作说明</string>
@@ -47,6 +49,9 @@
     <string name="show_full_image_title">卡片完整展示图片</string>
     <string name="show_full_image_enabled_description">已开启。卡片会完整显示整张图片，可能出现留白。</string>
     <string name="show_full_image_disabled_description">默认关闭。卡片保持当前裁剪铺满样式。</string>
+    <string name="tap_image_toggle_title">单击切换完整展示</string>
+    <string name="tap_image_toggle_enabled_description">已开启。单击顶部图片可在裁剪铺满与完整展示之间切换。</string>
+    <string name="tap_image_toggle_disabled_description">已关闭。单击顶部图片不会切换展示模式。</string>
     <string name="floating_delete_button_title">悬浮删除按钮</string>
     <string name="floating_delete_button_enabled_description">已开启。右下角显示红色小删除按钮，可拖动位置。</string>
     <string name="floating_delete_button_disabled_description">默认关闭。不显示悬浮删除按钮。</string>

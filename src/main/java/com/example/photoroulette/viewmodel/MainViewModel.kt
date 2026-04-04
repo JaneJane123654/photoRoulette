@@ -120,6 +120,12 @@ class MainViewModel(
     )
     val showFullImage: StateFlow<Boolean> = _showFullImage.asStateFlow()
 
+    private val _isTapImageToggleEnabled = MutableStateFlow(
+        savedStateHandle[KEY_IS_TAP_IMAGE_TOGGLE_ENABLED]
+            ?: SettingsRepository.DEFAULT_TAP_IMAGE_TOGGLE_ENABLED,
+    )
+    val isTapImageToggleEnabled: StateFlow<Boolean> = _isTapImageToggleEnabled.asStateFlow()
+
     private val _showFloatingDeleteButton = MutableStateFlow(
         savedStateHandle[KEY_SHOW_FLOATING_DELETE_BUTTON] ?: false,
     )
@@ -257,6 +263,13 @@ class MainViewModel(
             settingsRepository.showFullImage.collect { enabled ->
                 _showFullImage.value = enabled
                 savedStateHandle[KEY_SHOW_FULL_IMAGE] = enabled
+            }
+        }
+
+        scope.launch {
+            settingsRepository.isTapImageToggleEnabled.collect { enabled ->
+                _isTapImageToggleEnabled.value = enabled
+                savedStateHandle[KEY_IS_TAP_IMAGE_TOGGLE_ENABLED] = enabled
             }
         }
 
@@ -562,12 +575,16 @@ class MainViewModel(
     }
 
     fun setSwipeDeleteEnabled(enabled: Boolean) {
+        _isSwipeDeleteEnabled.value = enabled
+        savedStateHandle[KEY_IS_SWIPE_DELETE_ENABLED] = enabled
         scope.launch(ioDispatcher) {
             settingsRepository.setSwipeDeleteEnabled(enabled)
         }
     }
 
     fun setDeleteReminderEnabled(enabled: Boolean) {
+        _isDeleteReminderEnabled.value = enabled
+        savedStateHandle[KEY_IS_DELETE_REMINDER_ENABLED] = enabled
         scope.launch(ioDispatcher) {
             settingsRepository.setDeleteReminderEnabled(enabled)
         }
@@ -582,6 +599,14 @@ class MainViewModel(
     fun setShowFullImage(enabled: Boolean) {
         scope.launch(ioDispatcher) {
             settingsRepository.setShowFullImage(enabled)
+        }
+    }
+
+    fun setTapImageToggleEnabled(enabled: Boolean) {
+        _isTapImageToggleEnabled.value = enabled
+        savedStateHandle[KEY_IS_TAP_IMAGE_TOGGLE_ENABLED] = enabled
+        scope.launch(ioDispatcher) {
+            settingsRepository.setTapImageToggleEnabled(enabled)
         }
     }
 
@@ -616,6 +641,9 @@ class MainViewModel(
     }
 
     fun setSilentDeleteEnabled(enabled: Boolean) {
+        _isSilentDeleteEnabled.value = enabled
+        savedStateHandle[KEY_IS_SILENT_DELETE_ENABLED] = enabled
+
         if (!enabled) {
             pendingSilentDeleteScope = null
             scope.launch(ioDispatcher) {
@@ -1149,6 +1177,7 @@ class MainViewModel(
         const val KEY_IS_DELETE_REMINDER_ENABLED = "is_delete_reminder_enabled"
         const val KEY_SWIPE_GESTURE_SENSITIVITY = "swipe_gesture_sensitivity"
         const val KEY_SHOW_FULL_IMAGE = "show_full_image"
+        const val KEY_IS_TAP_IMAGE_TOGGLE_ENABLED = "is_tap_image_toggle_enabled"
         const val KEY_SHOW_FLOATING_DELETE_BUTTON = "show_floating_delete_button"
         const val KEY_IS_GESTURE_BALL_ENABLED = "is_gesture_ball_enabled"
         const val KEY_GESTURE_BALL_SIZE_SCALE = "gesture_ball_size_scale"

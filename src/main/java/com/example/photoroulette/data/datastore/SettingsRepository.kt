@@ -29,6 +29,7 @@ class SettingsRepository(
         val EnableSwipeDelete = booleanPreferencesKey("enable_swipe_delete")
         val EnableDeleteReminder = booleanPreferencesKey("enable_delete_reminder")
         val EnableSilentDelete = booleanPreferencesKey("enable_silent_delete")
+        val EnableTapImageToggle = booleanPreferencesKey("enable_tap_image_toggle")
         val ShowFullImage = booleanPreferencesKey("show_full_image")
         val ShowFloatingDeleteButton = booleanPreferencesKey("show_floating_delete_button")
         val EnableGestureBall = booleanPreferencesKey("enable_gesture_ball")
@@ -97,6 +98,18 @@ class SettingsRepository(
         }
         .map { preferences ->
             preferences[Keys.ShowFullImage] ?: false
+        }
+
+    val isTapImageToggleEnabled: Flow<Boolean> = appContext.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[Keys.EnableTapImageToggle] ?: DEFAULT_TAP_IMAGE_TOGGLE_ENABLED
         }
 
     val showFloatingDeleteButton: Flow<Boolean> = appContext.dataStore.data
@@ -311,6 +324,12 @@ class SettingsRepository(
         }
     }
 
+    suspend fun setTapImageToggleEnabled(enabled: Boolean) {
+        appContext.dataStore.edit { preferences ->
+            preferences[Keys.EnableTapImageToggle] = enabled
+        }
+    }
+
     suspend fun setShowFloatingDeleteButton(enabled: Boolean) {
         appContext.dataStore.edit { preferences ->
             preferences[Keys.ShowFloatingDeleteButton] = enabled
@@ -486,6 +505,7 @@ class SettingsRepository(
         const val MAX_SWIPE_GESTURE_SENSITIVITY = 1.35f
         const val DEFAULT_SWIPE_GESTURE_SENSITIVITY = 1f
         const val DEFAULT_DELETE_REMINDER_ENABLED = true
+        const val DEFAULT_TAP_IMAGE_TOGGLE_ENABLED = true
 
         val DEFAULT_LEFT_ACTION = SwipeAction.Delete
         val DEFAULT_RIGHT_ACTION = SwipeAction.Next

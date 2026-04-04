@@ -2,7 +2,6 @@ package com.example.photoroulette.ui.screens
 
 import android.view.HapticFeedbackConstants
 import android.view.SoundEffectConstants
-import android.widget.Toast
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.VectorConverter
@@ -54,6 +53,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -150,6 +151,7 @@ fun MainScreen(
     val isDeleteReminderEnabled by viewModel.isDeleteReminderEnabled.collectAsStateWithLifecycle()
     val swipeGestureSensitivity by viewModel.swipeGestureSensitivity.collectAsStateWithLifecycle()
     val showFullImage by viewModel.showFullImage.collectAsStateWithLifecycle()
+    val isTapImageToggleEnabled by viewModel.isTapImageToggleEnabled.collectAsStateWithLifecycle()
     val showFloatingDeleteButton by viewModel.showFloatingDeleteButton.collectAsStateWithLifecycle()
     val isGestureBallEnabled by viewModel.isGestureBallEnabled.collectAsStateWithLifecycle()
     val gestureBallSizeScale by viewModel.gestureBallSizeScale.collectAsStateWithLifecycle()
@@ -178,6 +180,7 @@ fun MainScreen(
     val hasPicturesDirectoryAuthorized = remember(silentDeleteTreeUris) {
         viewModel.hasSilentDeleteDirectory(SilentDeleteScope.Pictures)
     }
+    val deleteReminderHostState = remember { SnackbarHostState() }
 
     MainScreenContent(
         state = uiState,
@@ -186,6 +189,7 @@ fun MainScreen(
         isDeleteReminderEnabled = isDeleteReminderEnabled,
         swipeGestureSensitivity = swipeGestureSensitivity,
         showFullImage = showFullImage,
+        isTapImageToggleEnabled = isTapImageToggleEnabled,
         showFloatingDeleteButton = showFloatingDeleteButton,
         isGestureBallEnabled = isGestureBallEnabled,
         gestureBallSizeScale = gestureBallSizeScale,
@@ -205,6 +209,7 @@ fun MainScreen(
         availableUpdateRelease = availableUpdateRelease,
         updateCheckFeedback = updateCheckFeedback,
         isUpdateInstallInProgress = isUpdateInstallInProgress,
+        snackbarHostState = deleteReminderHostState,
         onRequestPermission = onRequestPermission,
         onOpenSettings = onOpenSettings,
         onPermissionRationaleDismissed = onPermissionRationaleDismissed,
@@ -213,6 +218,7 @@ fun MainScreen(
         onDeleteReminderEnabledChange = viewModel::setDeleteReminderEnabled,
         onSwipeGestureSensitivityChange = viewModel::setSwipeGestureSensitivity,
         onShowFullImageChange = viewModel::setShowFullImage,
+        onTapImageToggleEnabledChange = viewModel::setTapImageToggleEnabled,
         onShowFloatingDeleteButtonChange = viewModel::setShowFloatingDeleteButton,
         onGestureBallEnabledChange = viewModel::setGestureBallEnabled,
         onGestureBallSizeScaleChange = viewModel::setGestureBallSizeScale,
@@ -243,13 +249,12 @@ fun MainScreen(
     )
 
     val context = LocalContext.current
-    LaunchedEffect(viewModel, context) {
+    LaunchedEffect(viewModel, context, deleteReminderHostState) {
         viewModel.deleteReminderEvents.collectLatest {
-            Toast.makeText(
-                context,
-                context.getString(R.string.delete_reminder_toast),
-                Toast.LENGTH_SHORT,
-            ).show()
+            deleteReminderHostState.currentSnackbarData?.dismiss()
+            deleteReminderHostState.showSnackbar(
+                message = context.getString(R.string.delete_reminder_toast),
+            )
         }
     }
 
@@ -266,6 +271,7 @@ private fun MainScreenContent(
     isDeleteReminderEnabled: Boolean,
     swipeGestureSensitivity: Float,
     showFullImage: Boolean,
+    isTapImageToggleEnabled: Boolean,
     showFloatingDeleteButton: Boolean,
     isGestureBallEnabled: Boolean,
     gestureBallSizeScale: Float,
@@ -285,6 +291,7 @@ private fun MainScreenContent(
     availableUpdateRelease: AppReleaseInfo?,
     updateCheckFeedback: UpdateCheckFeedback,
     isUpdateInstallInProgress: Boolean,
+    snackbarHostState: SnackbarHostState,
     onRequestPermission: () -> Unit,
     onOpenSettings: () -> Unit,
     onPermissionRationaleDismissed: () -> Unit,
@@ -293,6 +300,7 @@ private fun MainScreenContent(
     onDeleteReminderEnabledChange: (Boolean) -> Unit,
     onSwipeGestureSensitivityChange: (Float) -> Unit,
     onShowFullImageChange: (Boolean) -> Unit,
+    onTapImageToggleEnabledChange: (Boolean) -> Unit,
     onShowFloatingDeleteButtonChange: (Boolean) -> Unit,
     onGestureBallEnabledChange: (Boolean) -> Unit,
     onGestureBallSizeScaleChange: (Float) -> Unit,
@@ -414,6 +422,7 @@ private fun MainScreenContent(
                             swipeUpAction = swipeUpAction,
                             swipeDownAction = swipeDownAction,
                             showFullImage = showFullImage,
+                            isTapImageToggleEnabled = isTapImageToggleEnabled,
                             onSwipeAction = onSwipeAction,
                             modifier = Modifier.fillMaxSize(),
                         )
@@ -485,6 +494,14 @@ private fun MainScreenContent(
                     modifier = Modifier.fillMaxSize(),
                 )
             }
+
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .windowInsetsPadding(WindowInsets.safeDrawing)
+                    .padding(top = 10.dp, start = 20.dp, end = 20.dp),
+            )
         }
     }
 
@@ -494,6 +511,7 @@ private fun MainScreenContent(
             isDeleteReminderEnabled = isDeleteReminderEnabled,
             swipeGestureSensitivity = swipeGestureSensitivity,
             showFullImage = showFullImage,
+            isTapImageToggleEnabled = isTapImageToggleEnabled,
             showFloatingDeleteButton = showFloatingDeleteButton,
             isGestureBallEnabled = isGestureBallEnabled,
             gestureBallSizeScale = gestureBallSizeScale,
@@ -514,6 +532,7 @@ private fun MainScreenContent(
             onDeleteReminderEnabledChange = onDeleteReminderEnabledChange,
             onSwipeGestureSensitivityChange = onSwipeGestureSensitivityChange,
             onShowFullImageChange = onShowFullImageChange,
+            onTapImageToggleEnabledChange = onTapImageToggleEnabledChange,
             onShowFloatingDeleteButtonChange = onShowFloatingDeleteButtonChange,
             onGestureBallEnabledChange = onGestureBallEnabledChange,
             onGestureBallSizeScaleChange = onGestureBallSizeScaleChange,
@@ -801,6 +820,16 @@ private fun DefaultBehaviorNotice(
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.86f),
                     )
                     Text(
+                        text = stringResource(id = R.string.default_behavior_line_tap_toggle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                    Text(
+                        text = stringResource(id = R.string.default_behavior_line_delete_delay),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.86f),
+                    )
+                    Text(
                         text = stringResource(id = R.string.default_behavior_line_visibility_rule),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.86f),
@@ -875,6 +904,7 @@ private fun SettingsDialog(
     isDeleteReminderEnabled: Boolean,
     swipeGestureSensitivity: Float,
     showFullImage: Boolean,
+    isTapImageToggleEnabled: Boolean,
     showFloatingDeleteButton: Boolean,
     isGestureBallEnabled: Boolean,
     gestureBallSizeScale: Float,
@@ -896,6 +926,7 @@ private fun SettingsDialog(
     onDeleteReminderEnabledChange: (Boolean) -> Unit,
     onSwipeGestureSensitivityChange: (Float) -> Unit,
     onShowFullImageChange: (Boolean) -> Unit,
+    onTapImageToggleEnabledChange: (Boolean) -> Unit,
     onShowFloatingDeleteButtonChange: (Boolean) -> Unit,
     onGestureBallEnabledChange: (Boolean) -> Unit,
     onGestureBallSizeScaleChange: (Float) -> Unit,
@@ -953,6 +984,10 @@ private fun SettingsDialog(
                 ImageDisplayControls(
                     showFullImage = showFullImage,
                     onCheckedChange = onShowFullImageChange,
+                )
+                TapImageToggleControls(
+                    isEnabled = isTapImageToggleEnabled,
+                    onCheckedChange = onTapImageToggleEnabledChange,
                 )
 
                 SettingsSectionTitle(text = stringResource(id = R.string.settings_section_swipe))
@@ -1232,28 +1267,31 @@ private fun UpdateAvailableDialog(
                         )
                     }
 
-                Row(
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                TextButton(
-                    onClick = onDismiss,
-                    enabled = !isInstalling,
-                ) {
-                    Text(text = stringResource(id = R.string.update_dialog_not_now))
-                }
+                    TextButton(
+                        onClick = onDismiss,
+                        enabled = !isInstalling,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(text = stringResource(id = R.string.update_dialog_not_now))
+                    }
 
-                OutlinedButton(
-                    onClick = onLater,
-                    enabled = !isInstalling,
-                ) {
-                    Text(text = stringResource(id = R.string.update_dialog_later))
-                }
+                    OutlinedButton(
+                        onClick = onLater,
+                        enabled = !isInstalling,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(text = stringResource(id = R.string.update_dialog_later))
+                    }
 
-                Button(
-                    onClick = onUpdateNow,
-                    enabled = !isInstalling,
-                ) {
+                    Button(
+                        onClick = onUpdateNow,
+                        enabled = !isInstalling,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
                         if (isInstalling) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
@@ -2189,6 +2227,52 @@ private fun SwipeDeleteControls(
 }
 
 @Composable
+private fun TapImageToggleControls(
+    isEnabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 18.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = stringResource(id = R.string.tap_image_toggle_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = if (isEnabled) {
+                        stringResource(id = R.string.tap_image_toggle_enabled_description)
+                    } else {
+                        stringResource(id = R.string.tap_image_toggle_disabled_description)
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            Switch(
+                checked = isEnabled,
+                onCheckedChange = onCheckedChange,
+            )
+        }
+    }
+}
+
+@Composable
 private fun DeleteReminderControls(
     isEnabled: Boolean,
     onCheckedChange: (Boolean) -> Unit,
@@ -2623,6 +2707,7 @@ private fun PhotoDeck(
     swipeUpAction: SwipeAction,
     swipeDownAction: SwipeAction,
     showFullImage: Boolean,
+    isTapImageToggleEnabled: Boolean,
     onSwipeAction: (SwipeAction, Long) -> Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -2725,6 +2810,7 @@ private fun PhotoDeck(
                             imageId = imageId,
                             showFullImage = if (isTopCard) topCardShowFullImage else showFullImage,
                             enableTwoFingerTransform = isTopCard,
+                            enableTapToggle = isTapImageToggleEnabled,
                             onGestureLockChanged = if (isTopCard) {
                                 { isTopCardImageGestureLocked = it }
                             } else {
@@ -2748,6 +2834,7 @@ private fun PhotoCardImage(
     imageId: Long,
     showFullImage: Boolean,
     enableTwoFingerTransform: Boolean,
+    enableTapToggle: Boolean,
     onGestureLockChanged: (Boolean) -> Unit,
     onTapWhenIdle: () -> Unit,
     modifier: Modifier = Modifier,
@@ -2839,7 +2926,7 @@ private fun PhotoCardImage(
                 onTap = {
                     if (zoomableState.userTransform.isNotEmpty()) {
                         zoomableState.reset()
-                    } else {
+                    } else if (enableTapToggle) {
                         currentOnTapWhenIdle()
                     }
                 },
@@ -2971,6 +3058,7 @@ private val PREVIEW_DEFAULT_DOWN_ACTION = SettingsRepository.DEFAULT_DOWN_ACTION
 @Composable
 private fun MainScreenReadyPreview() {
     MaterialTheme {
+        val previewSnackbarHostState = remember { SnackbarHostState() }
         MainScreenContent(
             state = HomeUiState.Ready(
                 visibleIds = listOf(11L, 12L, 13L),
@@ -2982,6 +3070,7 @@ private fun MainScreenReadyPreview() {
             isDeleteReminderEnabled = SettingsRepository.DEFAULT_DELETE_REMINDER_ENABLED,
             swipeGestureSensitivity = SettingsRepository.DEFAULT_SWIPE_GESTURE_SENSITIVITY,
             showFullImage = false,
+            isTapImageToggleEnabled = SettingsRepository.DEFAULT_TAP_IMAGE_TOGGLE_ENABLED,
             showFloatingDeleteButton = true,
             isGestureBallEnabled = true,
             gestureBallSizeScale = SettingsRepository.DEFAULT_GESTURE_BALL_SIZE_SCALE,
@@ -3001,6 +3090,7 @@ private fun MainScreenReadyPreview() {
             availableUpdateRelease = null,
             updateCheckFeedback = UpdateCheckFeedback.Idle,
             isUpdateInstallInProgress = false,
+            snackbarHostState = previewSnackbarHostState,
             onRequestPermission = {},
             onOpenSettings = {},
             onPermissionRationaleDismissed = {},
@@ -3009,6 +3099,7 @@ private fun MainScreenReadyPreview() {
             onDeleteReminderEnabledChange = {},
             onSwipeGestureSensitivityChange = {},
             onShowFullImageChange = {},
+            onTapImageToggleEnabledChange = {},
             onShowFloatingDeleteButtonChange = {},
             onGestureBallEnabledChange = {},
             onGestureBallSizeScaleChange = {},
@@ -3039,6 +3130,7 @@ private fun MainScreenReadyPreview() {
 @Composable
 private fun MainScreenPermissionPreview() {
     MaterialTheme {
+        val previewSnackbarHostState = remember { SnackbarHostState() }
         MainScreenContent(
             state = HomeUiState.PermissionDenied,
             permissionMode = PermissionHelper.PermissionMode.DENIED,
@@ -3046,6 +3138,7 @@ private fun MainScreenPermissionPreview() {
             isDeleteReminderEnabled = SettingsRepository.DEFAULT_DELETE_REMINDER_ENABLED,
             swipeGestureSensitivity = SettingsRepository.DEFAULT_SWIPE_GESTURE_SENSITIVITY,
             showFullImage = false,
+            isTapImageToggleEnabled = SettingsRepository.DEFAULT_TAP_IMAGE_TOGGLE_ENABLED,
             showFloatingDeleteButton = false,
             isGestureBallEnabled = false,
             gestureBallSizeScale = SettingsRepository.DEFAULT_GESTURE_BALL_SIZE_SCALE,
@@ -3065,6 +3158,7 @@ private fun MainScreenPermissionPreview() {
             availableUpdateRelease = null,
             updateCheckFeedback = UpdateCheckFeedback.Idle,
             isUpdateInstallInProgress = false,
+            snackbarHostState = previewSnackbarHostState,
             onRequestPermission = {},
             onOpenSettings = {},
             onPermissionRationaleDismissed = {},
@@ -3073,6 +3167,7 @@ private fun MainScreenPermissionPreview() {
             onDeleteReminderEnabledChange = {},
             onSwipeGestureSensitivityChange = {},
             onShowFullImageChange = {},
+            onTapImageToggleEnabledChange = {},
             onShowFloatingDeleteButtonChange = {},
             onGestureBallEnabledChange = {},
             onGestureBallSizeScaleChange = {},
