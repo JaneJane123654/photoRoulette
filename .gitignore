@@ -27,3 +27,11 @@ Project Implementation Process AI Memory Document.md
 实现文档.md
 plan/
 .signing_secrets
+
+# Logs
+*.log
+hs_err_pid*.log
+replay_pid*.log
+
+# Sensitive files
+release.keystore
