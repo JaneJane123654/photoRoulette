@@ -135,11 +135,11 @@
     <string name="silent_delete_guide_cancel">Not now</string>
     <string name="silent_delete_guide_continue">Open now</string>
 
-    <string name="photo_content_description">Photo from your library</string>
-    <string name="photo_load_error_title">This photo couldn\'t be loaded.</string>
-    <string name="photo_loading_title">Loading photo...</string>
-    <string name="photo_load_error_description">You can keep swiping and the deck will move on to the next image.</string>
-    <string name="photo_loading_description">Coil is fetching a down-sampled version to keep swiping smooth and memory-safe.</string>
+    <string name="photo_content_description">Media from your library</string>
+    <string name="photo_load_error_title">This media item couldn\'t be loaded.</string>
+    <string name="photo_loading_title">Loading media...</string>
+    <string name="photo_load_error_description">You can keep swiping and the deck will move on to the next item.</string>
+    <string name="photo_loading_description">The app is decoding a preview to keep swiping smooth and memory-safe.</string>
 
     <string name="permission_rationale_title">Shuffle your gallery on your terms</string>
     <string name="permission_rationale_description_primary">Photo Roulette needs photo access to build a random deck from your library. On Android 14, you can allow all photos for the broadest shuffle, or share only selected photos and albums if that feels better.</string>

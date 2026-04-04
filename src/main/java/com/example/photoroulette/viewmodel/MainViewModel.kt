@@ -4,16 +4,20 @@ import android.Manifest
 import android.app.Application
 import android.net.Uri
 import android.os.Build
+import android.provider.MediaStore
 import androidx.activity.result.IntentSenderRequest
 import androidx.core.content.FileProvider
 import android.provider.DocumentsContract
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import coil.ImageLoader
+import coil.decode.VideoFrameDecoder
 import coil.request.ImageRequest
+import coil.request.videoFrameMillis
 import com.example.photoroulette.BuildConfig
 import com.example.photoroulette.data.datastore.SettingsRepository
 import com.example.photoroulette.data.media.MediaRepository
+import com.example.photoroulette.model.MediaCard
 import com.example.photoroulette.data.update.AppUpdateRepository
 import com.example.photoroulette.model.AppReleaseInfo
 import com.example.photoroulette.model.DefaultBehaviorNoticeMode
@@ -66,13 +70,18 @@ class MainViewModel(
         settingsRepository = SettingsRepository(application),
         mediaRepository = MediaRepository(application),
         appUpdateRepository = AppUpdateRepository(application),
-        imageLoader = ImageLoader(application),
+        imageLoader = ImageLoader.Builder(application)
+            .components {
+                add(VideoFrameDecoder.Factory())
+            }
+            .build(),
     )
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var loadJob: Job? = null
     private var updateCheckJob: Job? = null
     private var queueIds: MutableList<Long> = restoreQueueIds()
+    private val mediaCardCache: MutableMap<Long, MediaCard> = mutableMapOf()
 
     private var currentIndex: Int = (savedStateHandle[KEY_CURRENT_INDEX] ?: 0).coerceAtLeast(0)
         set(value) {
@@ -375,7 +384,11 @@ class MainViewModel(
             appUpdateRepository.cleanupDownloadedApkPackages()
         }
 
-        if (_permissionMode.value != PermissionHelper.PermissionMode.DENIED && queueIds.isNotEmpty()) {
+        if (
+            _permissionMode.value != PermissionHelper.PermissionMode.DENIED &&
+            queueIds.isNotEmpty() &&
+            hasCachedCardsForVisibleWindow()
+        ) {
             emitQueueState()
             preloadUpcomingImages()
         }
@@ -398,7 +411,7 @@ class MainViewModel(
                     prepareDefaultBehaviorNoticeForSessionIfNeeded()
                 }
 
-                if (queueIds.isEmpty()) {
+                if (queueIds.isEmpty() || !hasCachedCardsForVisibleWindow()) {
                     refreshMedia()
                 } else {
                     emitQueueState()
@@ -414,7 +427,10 @@ class MainViewModel(
     ) {
         val mode = when {
             sdkInt >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
-                grants[Manifest.permission.READ_MEDIA_IMAGES] == true -> {
+                (
+                    grants[Manifest.permission.READ_MEDIA_IMAGES] == true ||
+                        grants[Manifest.permission.READ_MEDIA_VIDEO] == true
+                    ) -> {
                 PermissionHelper.PermissionMode.GRANTED_ALL
             }
 
@@ -424,7 +440,10 @@ class MainViewModel(
             }
 
             sdkInt >= Build.VERSION_CODES.TIRAMISU &&
-                grants[Manifest.permission.READ_MEDIA_IMAGES] == true -> {
+                (
+                    grants[Manifest.permission.READ_MEDIA_IMAGES] == true ||
+                        grants[Manifest.permission.READ_MEDIA_VIDEO] == true
+                    ) -> {
                 PermissionHelper.PermissionMode.GRANTED_ALL
             }
 
@@ -447,9 +466,10 @@ class MainViewModel(
 
         loadJob?.cancel()
         loadJob = scope.launch(ioDispatcher) {
-            val shuffledIds = mediaRepository.getShuffledMediaIds()
+            val shuffledCards = mediaRepository.getShuffledMediaCards()
 
-            queueIds = shuffledIds.toMutableList()
+            queueIds = shuffledCards.map { card -> card.id }.toMutableList()
+            updateMediaCardCache(shuffledCards)
             saveQueueIds()
             currentIndex = currentIndex.coerceIn(0, queueIds.size)
 
@@ -509,11 +529,16 @@ class MainViewModel(
         scope.launch(ioDispatcher) {
             val application = getApplication<Application>()
             val silentDeleteRequest = buildSilentDeleteRequest(imageId)
+            val mediaUri = mediaCardCache[imageId]?.previewUri
+                ?: IntentHelper.buildMediaUri(
+                    mediaId = imageId,
+                    collectionUri = MediaStore.Files.getContentUri(EXTERNAL_MEDIA_VOLUME),
+                )
             when (
                 val result = IntentHelper.prepareDelete(
                     context = application,
                     contentResolver = application.contentResolver,
-                    imageId = imageId,
+                    imageUri = mediaUri,
                     silentDeleteRequest = silentDeleteRequest,
                 )
             ) {
@@ -560,9 +585,11 @@ class MainViewModel(
             queueIds.removeAt(currentIndex - 1)
             currentIndex -= 1
             saveQueueIds()
+            mediaCardCache.remove(deletedId)
         } else if (queueIds.remove(deletedId)) {
             currentIndex = currentIndex.coerceAtMost(queueIds.size)
             saveQueueIds()
+            mediaCardCache.remove(deletedId)
         }
 
         pendingDeleteId = null
@@ -914,15 +941,16 @@ class MainViewModel(
             return
         }
 
-        val visibleIds = queueIds
+        val visibleCards = queueIds
             .drop(currentIndex)
             .take(HomeUiState.MAX_VISIBLE_CARD_COUNT)
+            .mapNotNull { id -> mediaCardCache[id] }
 
-        _uiState.value = if (visibleIds.isEmpty()) {
+        _uiState.value = if (visibleCards.isEmpty()) {
             HomeUiState.Empty
         } else {
             HomeUiState.Ready(
-                visibleIds = visibleIds,
+                visibleCards = visibleCards,
                 canSwipeToPrevious = canSwipeToPrevious(),
                 canSwipeToNext = canSwipeToNext(),
             )
@@ -934,17 +962,38 @@ class MainViewModel(
             return
         }
 
-        val preloadIds = queueIds
+        val preloadCards = queueIds
             .drop(currentIndex + HomeUiState.MAX_VISIBLE_CARD_COUNT)
             .take(PRELOAD_AHEAD_COUNT)
+            .mapNotNull { id -> mediaCardCache[id] }
 
-        preloadIds.forEach { imageId ->
+        preloadCards.forEach { card ->
+            val requestBuilder = ImageRequest.Builder(getApplication<Application>())
+                .data(card.previewUri)
+
+            if (card.isVideoLike) {
+                requestBuilder.videoFrameMillis(0)
+            }
+
             imageLoader.enqueue(
-                ImageRequest.Builder(getApplication<Application>())
-                    .data(IntentHelper.buildImageUri(imageId))
-                    .build(),
+                requestBuilder.build(),
             )
         }
+    }
+
+    private fun updateMediaCardCache(cards: List<MediaCard>) {
+        mediaCardCache.clear()
+        cards.forEach { card ->
+            mediaCardCache[card.id] = card
+        }
+    }
+
+    private fun hasCachedCardsForVisibleWindow(): Boolean {
+        val visibleIds = queueIds
+            .drop(currentIndex)
+            .take(HomeUiState.MAX_VISIBLE_CARD_COUNT)
+
+        return visibleIds.isNotEmpty() && visibleIds.all { id -> mediaCardCache.containsKey(id) }
     }
 
     private fun isTopVisibleId(imageId: Long): Boolean = queueIds.getOrNull(currentIndex) == imageId
@@ -1149,17 +1198,19 @@ class MainViewModel(
     }
 
     private fun createInitialUiState(): HomeUiState = when {
-        queueIds.isNotEmpty() && currentIndex < queueIds.size -> {
+        queueIds.isNotEmpty() && currentIndex < queueIds.size && hasCachedCardsForVisibleWindow() -> {
             HomeUiState.Ready(
-                visibleIds = queueIds
+                visibleCards = queueIds
                     .drop(currentIndex)
-                    .take(HomeUiState.MAX_VISIBLE_CARD_COUNT),
+                    .take(HomeUiState.MAX_VISIBLE_CARD_COUNT)
+                    .mapNotNull { id -> mediaCardCache[id] },
                 canSwipeToPrevious = canSwipeToPrevious(),
                 canSwipeToNext = canSwipeToNext(),
             )
         }
 
-        queueIds.isNotEmpty() || pendingDeleteId != null -> HomeUiState.Empty
+        queueIds.isNotEmpty() -> HomeUiState.Loading
+        pendingDeleteId != null -> HomeUiState.Empty
         else -> HomeUiState.Loading
     }
 
@@ -1169,6 +1220,7 @@ class MainViewModel(
     }
 
     private companion object {
+        const val EXTERNAL_MEDIA_VOLUME = "external"
         const val KEY_QUEUE_IDS = "queue_ids"
         const val KEY_CURRENT_INDEX = "current_index"
         const val KEY_PENDING_DELETE_ID = "pending_delete_id"

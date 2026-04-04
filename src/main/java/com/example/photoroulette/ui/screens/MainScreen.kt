@@ -1,11 +1,10 @@
 package com.example.photoroulette.ui.screens
 
+import android.graphics.Bitmap
+import android.graphics.Color as AndroidColor
+import android.net.Uri
 import android.view.HapticFeedbackConstants
 import android.view.SoundEffectConstants
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.VectorConverter
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Canvas
@@ -13,9 +12,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.calculateCentroid
-import androidx.compose.foundation.gestures.calculatePan
-import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -97,10 +93,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.PlayerView
 import com.example.photoroulette.R
 import com.example.photoroulette.BuildConfig
 import com.github.panpf.zoomimage.CoilZoomAsyncImage
@@ -112,25 +114,25 @@ import com.github.panpf.zoomimage.zoom.ScalesCalculator
 import com.example.photoroulette.data.datastore.SettingsRepository
 import com.example.photoroulette.model.AppReleaseInfo
 import com.example.photoroulette.model.DefaultBehaviorNoticeMode
+import com.example.photoroulette.model.MediaCard
+import com.example.photoroulette.model.MediaKind
 import com.example.photoroulette.model.SilentDeleteScope
 import com.example.photoroulette.model.SwipeAction
 import com.example.photoroulette.model.UpdateCheckFeedback
 import coil.compose.AsyncImage
 import coil.imageLoader
 import coil.request.ImageRequest
+import coil.request.videoFrameMillis
 import com.example.photoroulette.ui.components.EmptyGalleryScreen
 import com.example.photoroulette.ui.components.PermissionDeniedState
 import com.example.photoroulette.ui.components.SwipeDirection
 import com.example.photoroulette.ui.components.SwipeableCard
-import com.example.photoroulette.utils.IntentHelper
 import com.example.photoroulette.utils.PermissionHelper
 import com.example.photoroulette.viewmodel.MainViewModel
 import com.example.photoroulette.viewmodel.states.HomeUiState
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -347,7 +349,7 @@ private fun MainScreenContent(
     var isDefaultNoticeDismissedBySession by rememberSaveable { mutableStateOf(false) }
     var isDefaultNoticeExpanded by rememberSaveable { mutableStateOf(true) }
     var hasDefaultNoticeAutoCollapsed by rememberSaveable { mutableStateOf(false) }
-    val topVisibleImageId = (effectiveState as? HomeUiState.Ready)?.visibleIds?.firstOrNull()
+    val topVisibleImageId = (effectiveState as? HomeUiState.Ready)?.visibleCards?.firstOrNull()?.id
     val canSwipePrevious = (effectiveState as? HomeUiState.Ready)?.canSwipeToPrevious == true
     val canSwipeNext = (effectiveState as? HomeUiState.Ready)?.canSwipeToNext == true
     val shouldShowDefaultNotice =
@@ -412,7 +414,7 @@ private fun MainScreenContent(
 
                         HomeUiState.Empty -> EmptyGalleryScreen()
                         is HomeUiState.Ready -> PhotoDeck(
-                            visibleIds = effectiveState.visibleIds,
+                            visibleCards = effectiveState.visibleCards,
                             canSwipePrevious = effectiveState.canSwipeToPrevious,
                             canSwipeNext = effectiveState.canSwipeToNext,
                             isSwipeDeleteEnabled = isSwipeDeleteEnabled,
@@ -2697,7 +2699,7 @@ private fun LanguageSettingsControls(
 
 @Composable
 private fun PhotoDeck(
-    visibleIds: List<Long>,
+    visibleCards: List<MediaCard>,
     canSwipePrevious: Boolean,
     canSwipeNext: Boolean,
     isSwipeDeleteEnabled: Boolean,
@@ -2711,14 +2713,48 @@ private fun PhotoDeck(
     onSwipeAction: (SwipeAction, Long) -> Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+    val playerPool = remember(context) { DeckPlayerPool(context) }
     var topCardDragProgress by remember { mutableFloatStateOf(0f) }
     var isTopCardForceFullImage by remember { mutableStateOf(false) }
     var isTopCardImageGestureLocked by remember { mutableStateOf(false) }
+    val topCard = visibleCards.firstOrNull()
+    val nextVideoUri = remember(visibleCards) {
+        visibleCards
+            .drop(1)
+            .firstOrNull { card -> card.isVideoLike }
+            ?.playbackUri
+    }
 
-    LaunchedEffect(visibleIds.firstOrNull()) {
+    DisposableEffect(playerPool) {
+        onDispose {
+            playerPool.release()
+        }
+    }
+
+    LaunchedEffect(visibleCards.firstOrNull()?.id) {
         topCardDragProgress = 0f
         isTopCardForceFullImage = false
         isTopCardImageGestureLocked = false
+    }
+
+    LaunchedEffect(
+        topCard?.id,
+        topCard?.playbackUri,
+        topCard?.kind,
+        nextVideoUri,
+    ) {
+        val topVideoUri = topCard?.takeIf { card -> card.isVideoLike }?.playbackUri
+        if (topVideoUri != null) {
+            playerPool.activate(
+                uri = topVideoUri,
+                autoPlay = topCard.kind == MediaKind.Video,
+            )
+        } else {
+            playerPool.clearActive()
+        }
+
+        playerPool.warmup(nextVideoUri)
     }
 
     BoxWithConstraints(
@@ -2737,15 +2773,15 @@ private fun PhotoDeck(
         ) {
             val topCardShowFullImage = showFullImage || isTopCardForceFullImage
 
-            for (index in visibleIds.indices.reversed()) {
-                val imageId = visibleIds[index]
+            for (index in visibleCards.indices.reversed()) {
+                val card = visibleCards[index]
                 val isTopCard = index == 0
                 val layerInset = CARD_LAYER_INSET * index.toFloat()
                 val horizontalInset = layerInset
                 val verticalInset = layerInset * 1.2f
-                val cardZIndex = (visibleIds.size - index).toFloat()
+                val cardZIndex = (visibleCards.size - index).toFloat()
 
-                key(imageId) {
+                key(card.id) {
                     SwipeableCard(
                         onSwiped = { direction ->
                             val action = when (direction) {
@@ -2754,7 +2790,7 @@ private fun PhotoDeck(
                                 SwipeDirection.Up -> swipeUpAction
                                 SwipeDirection.Down -> swipeDownAction
                             }
-                            onSwipeAction(action, imageId)
+                            onSwipeAction(action, card.id)
                         },
                         modifier = Modifier
                             .fillMaxSize()
@@ -2806,8 +2842,10 @@ private fun PhotoDeck(
                         },
                         shape = RoundedCornerShape(28.dp),
                     ) {
-                        PhotoCardImage(
-                            imageId = imageId,
+                        MediaCardContent(
+                            card = card,
+                            isTopCard = isTopCard,
+                            playerPool = playerPool,
                             showFullImage = if (isTopCard) topCardShowFullImage else showFullImage,
                             enableTwoFingerTransform = isTopCard,
                             enableTapToggle = isTapImageToggleEnabled,
@@ -2830,8 +2868,59 @@ private fun PhotoDeck(
 }
 
 @Composable
-private fun PhotoCardImage(
-    imageId: Long,
+private fun MediaCardContent(
+    card: MediaCard,
+    isTopCard: Boolean,
+    playerPool: DeckPlayerPool,
+    showFullImage: Boolean,
+    enableTwoFingerTransform: Boolean,
+    enableTapToggle: Boolean,
+    onGestureLockChanged: (Boolean) -> Unit,
+    onTapWhenIdle: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    when (card.kind) {
+        MediaKind.Image -> {
+            StaticPhotoCardImage(
+                card = card,
+                showFullImage = showFullImage,
+                enableTwoFingerTransform = enableTwoFingerTransform,
+                enableTapToggle = enableTapToggle,
+                onGestureLockChanged = onGestureLockChanged,
+                onTapWhenIdle = onTapWhenIdle,
+                modifier = modifier,
+            )
+        }
+
+        MediaKind.AnimatedImage -> {
+            AnimatedPhotoCardImage(
+                card = card,
+                showFullImage = showFullImage,
+                enableTapToggle = enableTapToggle,
+                onGestureLockChanged = onGestureLockChanged,
+                onTapWhenIdle = onTapWhenIdle,
+                modifier = modifier,
+            )
+        }
+
+        MediaKind.Video,
+        MediaKind.LivePhoto,
+        -> {
+            VideoCardContent(
+                card = card,
+                isTopCard = isTopCard,
+                playerPool = playerPool,
+                showFullImage = showFullImage,
+                onGestureLockChanged = onGestureLockChanged,
+                modifier = modifier,
+            )
+        }
+    }
+}
+
+@Composable
+private fun StaticPhotoCardImage(
+    card: MediaCard,
     showFullImage: Boolean,
     enableTwoFingerTransform: Boolean,
     enableTapToggle: Boolean,
@@ -2840,14 +2929,15 @@ private fun PhotoCardImage(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val request = remember(context, imageId) {
+    val request = remember(context, card.id, card.previewUri) {
         ImageRequest.Builder(context)
-            .data(IntentHelper.buildImageUri(imageId))
+            .data(card.previewUri)
             .crossfade(true)
+            .bitmapConfig(Bitmap.Config.RGB_565)
             .build()
     }
 
-    var visualState by remember(imageId) { mutableStateOf(PhotoVisualState.Loading) }
+    var visualState by remember(card.id) { mutableStateOf(PhotoVisualState.Loading) }
     val currentOnGestureLockChanged by rememberUpdatedState(onGestureLockChanged)
     val currentOnTapWhenIdle by rememberUpdatedState(onTapWhenIdle)
     val placeholderPainter = ColorPainter(
@@ -2949,6 +3039,331 @@ private fun PhotoCardImage(
 }
 
 @Composable
+private fun AnimatedPhotoCardImage(
+    card: MediaCard,
+    showFullImage: Boolean,
+    enableTapToggle: Boolean,
+    onGestureLockChanged: (Boolean) -> Unit,
+    onTapWhenIdle: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    var useReducedDecode by remember(card.id) { mutableStateOf(false) }
+    var visualState by remember(card.id) { mutableStateOf(PhotoVisualState.Loading) }
+    val currentOnTapWhenIdle by rememberUpdatedState(onTapWhenIdle)
+    val placeholderPainter = ColorPainter(
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.24f),
+    )
+    val transparentPainter = remember { ColorPainter(Color.Transparent) }
+
+    val request = remember(context, card.id, card.previewUri, useReducedDecode) {
+        ImageRequest.Builder(context)
+            .data(card.previewUri)
+            .crossfade(true)
+            .bitmapConfig(Bitmap.Config.RGB_565)
+            .apply {
+                if (useReducedDecode) {
+                    size(ANIMATED_FALLBACK_SIZE_PX, ANIMATED_FALLBACK_SIZE_PX)
+                }
+            }
+            .build()
+    }
+
+    LaunchedEffect(Unit) {
+        onGestureLockChanged(false)
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.surfaceContainerHighest,
+                        MaterialTheme.colorScheme.surfaceContainer,
+                    ),
+                ),
+            ),
+    ) {
+        if (visualState != PhotoVisualState.Ready) {
+            PhotoFallbackContent(
+                isError = visualState == PhotoVisualState.Error,
+                modifier = Modifier.align(Alignment.Center),
+            )
+        }
+
+        AsyncImage(
+            model = request,
+            contentDescription = stringResource(id = R.string.photo_content_description),
+            modifier = Modifier
+                .fillMaxSize()
+                .then(
+                    if (enableTapToggle) {
+                        Modifier.clickable(onClick = currentOnTapWhenIdle)
+                    } else {
+                        Modifier
+                    },
+                ),
+            contentScale = if (showFullImage) ContentScale.Fit else ContentScale.Crop,
+            placeholder = placeholderPainter,
+            error = transparentPainter,
+            fallback = transparentPainter,
+            onLoading = { visualState = PhotoVisualState.Loading },
+            onSuccess = { visualState = PhotoVisualState.Ready },
+            onError = {
+                if (!useReducedDecode) {
+                    useReducedDecode = true
+                    visualState = PhotoVisualState.Loading
+                } else {
+                    visualState = PhotoVisualState.Error
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun VideoCardContent(
+    card: MediaCard,
+    isTopCard: Boolean,
+    playerPool: DeckPlayerPool,
+    showFullImage: Boolean,
+    onGestureLockChanged: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val playbackUri = card.playbackUri
+    val activePlayer = playerPool.activePlayer
+    val isLivePhoto = card.kind == MediaKind.LivePhoto
+    val shouldAttachPlayer = isTopCard && playbackUri != null && playerPool.isActiveUri(playbackUri)
+
+    var visualState by remember(card.id) { mutableStateOf(PhotoVisualState.Loading) }
+    var isCoverVisible by remember(card.id) { mutableStateOf(true) }
+    var isLiveMotionActive by remember(card.id) { mutableStateOf(false) }
+
+    val currentIsLivePhoto by rememberUpdatedState(isLivePhoto)
+    val currentIsLiveMotionActive by rememberUpdatedState(isLiveMotionActive)
+
+    val previewRequest = remember(context, card.id, card.previewUri) {
+        ImageRequest.Builder(context)
+            .data(card.previewUri)
+            .crossfade(true)
+            .videoFrameMillis(0)
+            .bitmapConfig(Bitmap.Config.RGB_565)
+            .build()
+    }
+
+    val placeholderPainter = ColorPainter(
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.24f),
+    )
+    val transparentPainter = remember { ColorPainter(Color.Transparent) }
+
+    LaunchedEffect(Unit) {
+        onGestureLockChanged(false)
+    }
+
+    LaunchedEffect(card.id, isTopCard, playbackUri) {
+        isCoverVisible = true
+        isLiveMotionActive = false
+        visualState = PhotoVisualState.Loading
+
+        if (!isTopCard || playbackUri == null || !playerPool.isActiveUri(playbackUri)) {
+            return@LaunchedEffect
+        }
+
+        if (!isLivePhoto && activePlayer.playbackState == Player.STATE_READY) {
+            isCoverVisible = false
+            visualState = PhotoVisualState.Ready
+        }
+    }
+
+    DisposableEffect(activePlayer, playbackUri, shouldAttachPlayer) {
+        if (!shouldAttachPlayer) {
+            onDispose { }
+        } else {
+            val targetUri = playbackUri
+            val listener = object : Player.Listener {
+                override fun onRenderedFirstFrame() {
+                    if (!playerPool.isActiveUri(targetUri)) {
+                        return
+                    }
+
+                    if (!currentIsLivePhoto || currentIsLiveMotionActive) {
+                        isCoverVisible = false
+                    }
+                    visualState = PhotoVisualState.Ready
+                }
+
+                override fun onPlaybackStateChanged(playbackState: Int) {
+                    if (!playerPool.isActiveUri(targetUri)) {
+                        return
+                    }
+
+                    when (playbackState) {
+                        Player.STATE_BUFFERING -> {
+                            if (visualState != PhotoVisualState.Error) {
+                                visualState = PhotoVisualState.Loading
+                            }
+                        }
+
+                        Player.STATE_READY -> {
+                            if (!currentIsLivePhoto && activePlayer.playWhenReady) {
+                                isCoverVisible = false
+                                visualState = PhotoVisualState.Ready
+                            }
+                        }
+
+                        else -> Unit
+                    }
+                }
+            }
+
+            activePlayer.addListener(listener)
+            onDispose {
+                activePlayer.removeListener(listener)
+            }
+        }
+    }
+
+    val interactionModifier = when {
+        !isTopCard || playbackUri == null -> Modifier
+
+        isLivePhoto -> Modifier.pointerInput(card.id, activePlayer, playbackUri) {
+            detectTapGestures(
+                onLongPress = {
+                    if (!playerPool.isActiveUri(playbackUri)) {
+                        return@detectTapGestures
+                    }
+                    isLiveMotionActive = true
+                    isCoverVisible = true
+                    visualState = PhotoVisualState.Loading
+                    activePlayer.playWhenReady = true
+                    activePlayer.play()
+                },
+                onPress = {
+                    tryAwaitRelease()
+                    if (isLiveMotionActive && playerPool.isActiveUri(playbackUri)) {
+                        isLiveMotionActive = false
+                        isCoverVisible = true
+                        activePlayer.pause()
+                        activePlayer.seekTo(0L)
+                    }
+                },
+            )
+        }
+
+        else -> Modifier.pointerInput(card.id, activePlayer, playbackUri) {
+            detectTapGestures(
+                onTap = {
+                    if (!playerPool.isActiveUri(playbackUri)) {
+                        return@detectTapGestures
+                    }
+                    if (activePlayer.isPlaying) {
+                        activePlayer.pause()
+                    } else {
+                        activePlayer.playWhenReady = true
+                        activePlayer.play()
+                    }
+                },
+            )
+        }
+    }
+
+    DisposableEffect(playbackUri, isTopCard, isLivePhoto) {
+        onDispose {
+            if (isTopCard && playbackUri != null && playerPool.isActiveUri(playbackUri)) {
+                if (isLivePhoto) {
+                    activePlayer.pause()
+                    activePlayer.seekTo(0L)
+                } else {
+                    activePlayer.pause()
+                }
+            }
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.surfaceContainerHighest,
+                        MaterialTheme.colorScheme.surfaceContainer,
+                    ),
+                ),
+            )
+            .then(interactionModifier),
+    ) {
+        if (isTopCard && playbackUri != null) {
+            AndroidView(
+                modifier = Modifier.matchParentSize(),
+                factory = { viewContext ->
+                    PlayerView(viewContext).apply {
+                        useController = false
+                        setShutterBackgroundColor(AndroidColor.TRANSPARENT)
+                        setKeepContentOnPlayerReset(true)
+                        resizeMode = if (showFullImage) {
+                            AspectRatioFrameLayout.RESIZE_MODE_FIT
+                        } else {
+                            AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                        }
+                    }
+                },
+                update = { playerView ->
+                    playerView.resizeMode = if (showFullImage) {
+                        AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    } else {
+                        AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                    }
+                    playerView.player = if (playerPool.isActiveUri(playbackUri)) {
+                        activePlayer
+                    } else {
+                        null
+                    }
+                },
+            )
+        }
+
+        if (!isTopCard || isCoverVisible) {
+            AsyncImage(
+                model = previewRequest,
+                contentDescription = stringResource(id = R.string.photo_content_description),
+                modifier = Modifier.matchParentSize(),
+                contentScale = if (showFullImage) ContentScale.Fit else ContentScale.Crop,
+                placeholder = placeholderPainter,
+                error = transparentPainter,
+                fallback = transparentPainter,
+                onLoading = {
+                    if (visualState != PhotoVisualState.Error) {
+                        visualState = PhotoVisualState.Loading
+                    }
+                },
+                onSuccess = {
+                    if (visualState != PhotoVisualState.Error) {
+                        visualState = PhotoVisualState.Ready
+                    }
+                },
+                onError = {
+                    if (!isTopCard || playbackUri == null) {
+                        visualState = PhotoVisualState.Error
+                    } else if (visualState != PhotoVisualState.Error) {
+                        visualState = PhotoVisualState.Loading
+                    }
+                },
+            )
+        }
+
+        if (visualState != PhotoVisualState.Ready) {
+            PhotoFallbackContent(
+                isError = visualState == PhotoVisualState.Error,
+                modifier = Modifier.align(Alignment.Center),
+            )
+        }
+    }
+}
+
+@Composable
 private fun PhotoFallbackContent(
     isError: Boolean,
     modifier: Modifier = Modifier,
@@ -3011,6 +3426,101 @@ private enum class PhotoVisualState {
     Error,
 }
 
+private class DeckPlayerPool(context: android.content.Context) {
+    private val appContext = context.applicationContext
+
+    val activePlayer: ExoPlayer = buildPlayer(looping = true)
+    private val warmupPlayer: ExoPlayer = buildPlayer(looping = false)
+
+    private var activeUri: Uri? = null
+    private var warmupUri: Uri? = null
+
+    fun activate(
+        uri: Uri,
+        autoPlay: Boolean,
+    ) {
+        if (activeUri == uri) {
+            activePlayer.playWhenReady = autoPlay
+            if (autoPlay) {
+                activePlayer.play()
+            } else {
+                activePlayer.pause()
+                activePlayer.seekTo(0L)
+            }
+            return
+        }
+
+        activeUri = uri
+        activePlayer.stop()
+        activePlayer.clearMediaItems()
+        activePlayer.setMediaItem(MediaItem.fromUri(uri))
+        activePlayer.prepare()
+        activePlayer.playWhenReady = autoPlay
+        if (autoPlay) {
+            activePlayer.play()
+        } else {
+            activePlayer.pause()
+            activePlayer.seekTo(0L)
+        }
+    }
+
+    fun warmup(uri: Uri?) {
+        if (uri == null) {
+            clearWarmup()
+            return
+        }
+
+        if (uri == activeUri || uri == warmupUri) {
+            return
+        }
+
+        warmupUri = uri
+        warmupPlayer.stop()
+        warmupPlayer.clearMediaItems()
+        warmupPlayer.setMediaItem(MediaItem.fromUri(uri))
+        warmupPlayer.prepare()
+        warmupPlayer.playWhenReady = false
+    }
+
+    fun clearActive() {
+        activeUri = null
+        activePlayer.playWhenReady = false
+        activePlayer.stop()
+        activePlayer.clearMediaItems()
+    }
+
+    fun isActiveUri(uri: Uri?): Boolean = activeUri != null && activeUri == uri
+
+    fun release() {
+        activePlayer.release()
+        warmupPlayer.release()
+        activeUri = null
+        warmupUri = null
+    }
+
+    private fun clearWarmup() {
+        warmupUri = null
+        warmupPlayer.playWhenReady = false
+        warmupPlayer.stop()
+        warmupPlayer.clearMediaItems()
+    }
+
+    private fun buildPlayer(looping: Boolean): ExoPlayer {
+        return ExoPlayer.Builder(appContext)
+            .setHandleAudioBecomingNoisy(false)
+            .build()
+            .apply {
+                repeatMode = if (looping) {
+                    Player.REPEAT_MODE_ALL
+                } else {
+                    Player.REPEAT_MODE_OFF
+                }
+                volume = 0f
+                playWhenReady = false
+            }
+    }
+}
+
 private data class LanguageUiOption(
     val tag: String,
     val label: String,
@@ -3048,6 +3558,7 @@ private const val GESTURE_BALL_DEFAULT_CENTER_Y_RATIO = 0.55f
 private const val GESTURE_BALL_DRAG_CENTER_RATIO = 0.55f
 private const val GESTURE_BALL_HOLD_TO_DRAG_MS = 180L
 private const val DEFAULT_BEHAVIOR_NOTICE_AUTO_COLLAPSE_DELAY_MS = 5_000L
+private const val ANIMATED_FALLBACK_SIZE_PX = 1080
 
 private val PREVIEW_DEFAULT_LEFT_ACTION = SettingsRepository.DEFAULT_LEFT_ACTION
 private val PREVIEW_DEFAULT_RIGHT_ACTION = SettingsRepository.DEFAULT_RIGHT_ACTION
@@ -3061,7 +3572,28 @@ private fun MainScreenReadyPreview() {
         val previewSnackbarHostState = remember { SnackbarHostState() }
         MainScreenContent(
             state = HomeUiState.Ready(
-                visibleIds = listOf(11L, 12L, 13L),
+                visibleCards = listOf(
+                    MediaCard(
+                        id = 11L,
+                        mimeType = "image/jpeg",
+                        kind = MediaKind.Image,
+                        previewUri = Uri.EMPTY,
+                    ),
+                    MediaCard(
+                        id = 12L,
+                        mimeType = "image/gif",
+                        kind = MediaKind.AnimatedImage,
+                        previewUri = Uri.EMPTY,
+                    ),
+                    MediaCard(
+                        id = 13L,
+                        mimeType = "video/mp4",
+                        kind = MediaKind.Video,
+                        previewUri = Uri.EMPTY,
+                        playbackUri = Uri.EMPTY,
+                        durationMs = 800L,
+                    ),
+                ),
                 canSwipeToPrevious = true,
                 canSwipeToNext = true,
             ),

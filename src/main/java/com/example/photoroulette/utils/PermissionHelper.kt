@@ -19,10 +19,12 @@ object PermissionHelper {
     fun getReadPermissions(sdkInt: Int = Build.VERSION.SDK_INT): Array<String> = when {
         sdkInt >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> arrayOf(
             Manifest.permission.READ_MEDIA_IMAGES,
+            Manifest.permission.READ_MEDIA_VIDEO,
             Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED,
         )
         sdkInt >= Build.VERSION_CODES.TIRAMISU -> arrayOf(
             Manifest.permission.READ_MEDIA_IMAGES,
+            Manifest.permission.READ_MEDIA_VIDEO,
         )
         else -> arrayOf(
             Manifest.permission.READ_EXTERNAL_STORAGE,
@@ -33,13 +35,14 @@ object PermissionHelper {
         context: Context,
         sdkInt: Int = Build.VERSION.SDK_INT,
     ): PermissionMode {
-        val fullAccessPermission = if (sdkInt >= Build.VERSION_CODES.TIRAMISU) {
-            Manifest.permission.READ_MEDIA_IMAGES
+        val hasFullMediaPermission = if (sdkInt >= Build.VERSION_CODES.TIRAMISU) {
+            context.hasPermission(Manifest.permission.READ_MEDIA_IMAGES) ||
+                context.hasPermission(Manifest.permission.READ_MEDIA_VIDEO)
         } else {
-            Manifest.permission.READ_EXTERNAL_STORAGE
+            context.hasPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
         }
 
-        if (context.hasPermission(fullAccessPermission)) {
+        if (hasFullMediaPermission) {
             return PermissionMode.GRANTED_ALL
         }
 

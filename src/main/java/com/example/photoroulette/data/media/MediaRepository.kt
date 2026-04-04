@@ -4,6 +4,8 @@ import android.content.ContentUris
 import android.content.Context
 import android.net.Uri
 import android.provider.MediaStore
+import com.example.photoroulette.model.MediaCard
+import com.example.photoroulette.model.MediaKind
 import java.util.Calendar
 import java.util.TimeZone
 import kotlin.random.Random
@@ -22,9 +24,9 @@ class MediaRepository(
      * Future ContentObserver hooks can watch this URI to refresh the shuffled queue
      * after external gallery changes.
      */
-    val observeUri: Uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+    val observeUri: Uri = MediaStore.Files.getContentUri(EXTERNAL_VOLUME)
 
-    suspend fun getShuffledMediaIds(): List<Long> = withContext(ioDispatcher) {
+    suspend fun getShuffledMediaCards(): List<MediaCard> = withContext(ioDispatcher) {
         val mediaEntries = queryMediaEntries()
         if (mediaEntries.isEmpty()) {
             return@withContext emptyList()
@@ -64,17 +66,21 @@ class MediaRepository(
 
     private fun queryMediaEntries(): List<MediaEntry> {
         val entries = mutableListOf<MediaEntry>()
-        val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC, ${MediaStore.Images.Media._ID} DESC"
+        val sortOrder = "${MediaStore.MediaColumns.DATE_ADDED} DESC, ${MediaStore.MediaColumns._ID} DESC"
 
         contentResolver.query(
             observeUri,
             PROJECTION,
-            null,
-            null,
+            SELECTION,
+            SELECTION_ARGS,
             sortOrder,
         )?.use { cursor ->
-            val idColumnIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-            val dateAddedColumnIndex = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_ADDED)
+            val idColumnIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
+            val dateAddedColumnIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_ADDED)
+            val mediaTypeColumnIndex = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
+            val mimeTypeColumnIndex = cursor.getColumnIndex(MediaStore.MediaColumns.MIME_TYPE)
+            val durationColumnIndex = cursor.getColumnIndex(MediaStore.MediaColumns.DURATION)
+            val displayNameColumnIndex = cursor.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME)
 
             while (cursor.moveToNext()) {
                 val dateAddedSeconds = if (cursor.isNull(dateAddedColumnIndex)) {
@@ -83,8 +89,45 @@ class MediaRepository(
                     cursor.getLong(dateAddedColumnIndex)
                 }
 
+                val id = cursor.getLong(idColumnIndex)
+                val mediaType = cursor.getInt(mediaTypeColumnIndex)
+                val mimeType = if (mimeTypeColumnIndex >= 0 && !cursor.isNull(mimeTypeColumnIndex)) {
+                    cursor.getString(mimeTypeColumnIndex)
+                } else {
+                    DEFAULT_MIME_TYPE
+                }
+                val durationMs = if (durationColumnIndex >= 0 && !cursor.isNull(durationColumnIndex)) {
+                    cursor.getLong(durationColumnIndex)
+                } else {
+                    NO_DURATION
+                }
+                val displayName = if (displayNameColumnIndex >= 0 && !cursor.isNull(displayNameColumnIndex)) {
+                    cursor.getString(displayNameColumnIndex)
+                } else {
+                    EMPTY_DISPLAY_NAME
+                }
+
+                val mediaUri = ContentUris.withAppendedId(observeUri, id)
+                val mediaKind = resolveMediaKind(
+                    mediaType = mediaType,
+                    mimeType = mimeType,
+                    durationMs = durationMs,
+                    displayName = displayName,
+                )
+
                 entries += MediaEntry(
-                    id = cursor.getLong(idColumnIndex),
+                    card = MediaCard(
+                        id = id,
+                        mimeType = mimeType,
+                        kind = mediaKind,
+                        previewUri = mediaUri,
+                        playbackUri = if (mediaKind == MediaKind.Video || mediaKind == MediaKind.LivePhoto) {
+                            mediaUri
+                        } else {
+                            null
+                        },
+                        durationMs = durationMs.coerceAtLeast(NO_DURATION),
+                    ),
                     dateAddedSeconds = dateAddedSeconds,
                 )
             }
@@ -93,7 +136,7 @@ class MediaRepository(
         return entries
     }
 
-    private fun buildSmartShuffle(entries: List<MediaEntry>): List<Long> {
+    private fun buildSmartShuffle(entries: List<MediaEntry>): List<MediaCard> {
         val bucketCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
         val activeBuckets = entries
             .groupBy { entry ->
@@ -105,13 +148,13 @@ class MediaRepository(
             .map { (bucketKey, bucketEntries) ->
                 Bucket(
                     key = bucketKey,
-                    ids = bucketEntries.map { it.id }.shuffled(random).toMutableList(),
+                    cards = bucketEntries.map { it.card }.shuffled(random).toMutableList(),
                 )
             }
             .shuffled(random)
             .toMutableList()
 
-        val distributedIds = ArrayList<Long>(entries.size)
+        val distributedCards = ArrayList<MediaCard>(entries.size)
         var previousBucketKey: Int? = null
 
         while (activeBuckets.isNotEmpty()) {
@@ -121,20 +164,20 @@ class MediaRepository(
             activeBuckets.clear()
 
             for (bucket in roundBuckets) {
-                if (bucket.ids.isEmpty()) {
+                if (bucket.cards.isEmpty()) {
                     continue
                 }
 
-                distributedIds += bucket.ids.removeAt(bucket.ids.lastIndex)
+                distributedCards += bucket.cards.removeAt(bucket.cards.lastIndex)
                 previousBucketKey = bucket.key
 
-                if (bucket.ids.isNotEmpty()) {
+                if (bucket.cards.isNotEmpty()) {
                     activeBuckets += bucket
                 }
             }
         }
 
-        return distributedIds
+        return distributedCards
     }
 
     private fun moveDifferentBucketToFront(
@@ -170,8 +213,45 @@ class MediaRepository(
         return (year * 100) + month
     }
 
+    private fun resolveMediaKind(
+        mediaType: Int,
+        mimeType: String,
+        durationMs: Long,
+        displayName: String,
+    ): MediaKind {
+        if (mediaType == MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO) {
+            val normalizedMimeType = mimeType.lowercase()
+            val normalizedDisplayName = displayName.lowercase()
+            val hasLiveNameHint = normalizedDisplayName.startsWith("mvimg") ||
+                normalizedDisplayName.contains("motion") ||
+                normalizedDisplayName.contains("live")
+            val isLiveStyle = normalizedMimeType.contains("quicktime") ||
+                normalizedMimeType.contains("motion") ||
+                (hasLiveNameHint && durationMs in 1..LIVE_PHOTO_MAX_DURATION_MS)
+
+            return if (isLiveStyle) {
+                MediaKind.LivePhoto
+            } else {
+                MediaKind.Video
+            }
+        }
+
+        return if (isAnimatedImageMimeType(mimeType)) {
+            MediaKind.AnimatedImage
+        } else {
+            MediaKind.Image
+        }
+    }
+
+    private fun isAnimatedImageMimeType(mimeType: String): Boolean {
+        val normalizedMimeType = mimeType.lowercase()
+        return normalizedMimeType == "image/gif" ||
+            normalizedMimeType == "image/webp" ||
+            normalizedMimeType == "image/apng"
+    }
+
     private data class MediaEntry(
-        val id: Long,
+        val card: MediaCard,
         val dateAddedSeconds: Long,
     )
 
@@ -182,13 +262,24 @@ class MediaRepository(
 
     private data class Bucket(
         val key: Int,
-        val ids: MutableList<Long>,
+        val cards: MutableList<MediaCard>,
     )
 
     private companion object {
+        const val EXTERNAL_VOLUME = "external"
         val PROJECTION = arrayOf(
-            MediaStore.Images.Media._ID,
-            MediaStore.Images.Media.DATE_ADDED,
+            MediaStore.MediaColumns._ID,
+            MediaStore.MediaColumns.DATE_ADDED,
+            MediaStore.MediaColumns.MIME_TYPE,
+            MediaStore.Files.FileColumns.MEDIA_TYPE,
+            MediaStore.MediaColumns.DURATION,
+            MediaStore.MediaColumns.DISPLAY_NAME,
+        )
+        const val SELECTION =
+            "${MediaStore.Files.FileColumns.MEDIA_TYPE}=? OR ${MediaStore.Files.FileColumns.MEDIA_TYPE}=?"
+        val SELECTION_ARGS = arrayOf(
+            MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString(),
+            MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString(),
         )
         val SILENT_DELETE_PROJECTION = arrayOf(
             MediaStore.MediaColumns.DISPLAY_NAME,
@@ -196,6 +287,10 @@ class MediaRepository(
         )
 
         const val MILLIS_PER_SECOND = 1_000L
+        const val NO_DURATION = 0L
+        const val LIVE_PHOTO_MAX_DURATION_MS = 3_500L
+        const val DEFAULT_MIME_TYPE = "application/octet-stream"
+        const val EMPTY_DISPLAY_NAME = ""
         const val UNKNOWN_DATE_ADDED_SECONDS = 0L
         const val UNKNOWN_BUCKET_KEY = -1
     }

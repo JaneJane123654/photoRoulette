@@ -1,5 +1,7 @@
 package com.example.photoroulette.viewmodel.states
 
+import com.example.photoroulette.model.MediaCard
+
 sealed interface HomeUiState {
 
     data object Loading : HomeUiState
@@ -9,15 +11,15 @@ sealed interface HomeUiState {
     data object Empty : HomeUiState
 
     data class Ready(
-        val visibleIds: List<Long>,
+        val visibleCards: List<MediaCard>,
         val canSwipeToPrevious: Boolean,
         val canSwipeToNext: Boolean,
     ) : HomeUiState {
         init {
-            require(visibleIds.isNotEmpty()) {
+            require(visibleCards.isNotEmpty()) {
                 "Ready must contain at least one visible media ID."
             }
-            require(visibleIds.size <= MAX_VISIBLE_CARD_COUNT) {
+            require(visibleCards.size <= MAX_VISIBLE_CARD_COUNT) {
                 "Ready can expose at most $MAX_VISIBLE_CARD_COUNT visible media IDs."
             }
         }

@@ -27,10 +27,28 @@ object IntentHelper {
         val relativePath: String?,
     )
 
+    data class MediaTarget(
+        val id: Long,
+        val collectionUri: Uri,
+    )
+
     fun buildImageUri(
         imageId: Long,
         collectionUri: Uri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
     ): Uri = ContentUris.withAppendedId(collectionUri, imageId)
+
+    fun buildMediaUri(target: MediaTarget): Uri = buildImageUri(
+        imageId = target.id,
+        collectionUri = target.collectionUri,
+    )
+
+    fun buildMediaUri(
+        mediaId: Long,
+        collectionUri: Uri,
+    ): Uri = buildImageUri(
+        imageId = mediaId,
+        collectionUri = collectionUri,
+    )
 
     fun createDeleteRequestOrNull(
         contentResolver: ContentResolver,
@@ -124,6 +142,27 @@ object IntentHelper {
         return prepareDelete(
             contentResolver = contentResolver,
             imageUri = buildImageUri(imageId, collectionUri),
+            sdkInt = sdkInt,
+        )
+    }
+
+    fun prepareDelete(
+        context: Context,
+        contentResolver: ContentResolver,
+        imageUri: Uri,
+        silentDeleteRequest: SilentDeleteRequest?,
+        sdkInt: Int = Build.VERSION.SDK_INT,
+    ): DeleteRequestResult {
+        if (silentDeleteRequest != null) {
+            when (trySilentDelete(context, silentDeleteRequest)) {
+                SilentDeleteOutcome.Deleted -> return DeleteRequestResult.Deleted
+                SilentDeleteOutcome.NotAvailable -> Unit
+            }
+        }
+
+        return prepareDelete(
+            contentResolver = contentResolver,
+            imageUri = imageUri,
             sdkInt = sdkInt,
         )
     }
