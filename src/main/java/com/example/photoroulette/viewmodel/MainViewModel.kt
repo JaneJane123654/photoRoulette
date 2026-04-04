@@ -29,6 +29,7 @@ import com.example.photoroulette.utils.PermissionHelper
 import com.example.photoroulette.utils.VersionNameUtils
 import com.example.photoroulette.viewmodel.states.HomeUiState
 import java.io.File
+import java.util.ArrayDeque
 import java.util.ArrayList
 import java.util.Calendar
 import java.util.Locale
@@ -46,6 +47,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainViewModel(
     application: Application,
@@ -59,6 +61,15 @@ class MainViewModel(
 
     data class DeleteReminderEvent(
         val deletedImageId: Long,
+    )
+
+    private data class SystemDeleteRequest(
+        val imageId: Long,
+        val request: IntentSenderRequest,
+    )
+
+    private data class PendingDeleteEntry(
+        val originalIndex: Int,
     )
 
     constructor(
@@ -89,11 +100,9 @@ class MainViewModel(
             savedStateHandle[KEY_CURRENT_INDEX] = field
         }
 
-    private var pendingDeleteId: Long? = savedStateHandle[KEY_PENDING_DELETE_ID]
-        set(value) {
-            field = value
-            savedStateHandle[KEY_PENDING_DELETE_ID] = value
-        }
+    private val pendingDeleteEntries: MutableMap<Long, PendingDeleteEntry> = mutableMapOf()
+    private val pendingSystemDeleteRequests: ArrayDeque<SystemDeleteRequest> = ArrayDeque()
+    private var activeSystemDeleteRequest: SystemDeleteRequest? = null
 
     private val _uiState = MutableStateFlow(createInitialUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
@@ -467,15 +476,17 @@ class MainViewModel(
         loadJob?.cancel()
         loadJob = scope.launch(ioDispatcher) {
             val shuffledCards = mediaRepository.getShuffledMediaCards()
+            val shuffledIds = shuffledCards.map { card -> card.id }
+            val availableIds = shuffledIds.toSet()
 
-            queueIds = shuffledCards.map { card -> card.id }.toMutableList()
+            reconcilePendingDeletesWithAvailableIds(availableIds)
+
+            queueIds = shuffledIds
+                .filterNot { id -> pendingDeleteEntries.containsKey(id) }
+                .toMutableList()
             updateMediaCardCache(shuffledCards)
             saveQueueIds()
             currentIndex = currentIndex.coerceIn(0, queueIds.size)
-
-            if (pendingDeleteId != null && pendingDeleteId !in queueIds) {
-                pendingDeleteId = null
-            }
 
             emitQueueState()
             preloadUpcomingImages()
@@ -487,7 +498,7 @@ class MainViewModel(
     }
 
     fun swipePrevious(imageId: Long): Boolean {
-        if (pendingDeleteId != null || !isTopVisibleId(imageId) || !canSwipeToPrevious()) {
+        if (!isTopVisibleId(imageId) || !canSwipeToPrevious()) {
             return false
         }
 
@@ -498,7 +509,7 @@ class MainViewModel(
     }
 
     fun swipeNext(imageId: Long): Boolean {
-        if (pendingDeleteId != null || !isTopVisibleId(imageId) || !canSwipeToNext()) {
+        if (!isTopVisibleId(imageId) || !canSwipeToNext()) {
             return false
         }
 
@@ -517,34 +528,39 @@ class MainViewModel(
             return swipeSkip(imageId)
         }
 
-        if (pendingDeleteId != null) {
+        if (!dismissCardForDelete(imageId)) {
             return false
         }
 
-        pendingDeleteId = imageId
-        currentIndex += 1
-        emitQueueState()
-        preloadUpcomingImages()
-
-        scope.launch(ioDispatcher) {
+        scope.launch {
             val application = getApplication<Application>()
-            val silentDeleteRequest = buildSilentDeleteRequest(imageId)
             val mediaUri = mediaCardCache[imageId]?.previewUri
                 ?: IntentHelper.buildMediaUri(
                     mediaId = imageId,
                     collectionUri = MediaStore.Files.getContentUri(EXTERNAL_MEDIA_VOLUME),
                 )
-            when (
-                val result = IntentHelper.prepareDelete(
+
+            val result = withContext(ioDispatcher) {
+                val silentDeleteRequest = buildSilentDeleteRequest(imageId)
+                IntentHelper.prepareDelete(
                     context = application,
                     contentResolver = application.contentResolver,
                     imageUri = mediaUri,
                     silentDeleteRequest = silentDeleteRequest,
                 )
+            }
+
+            when (
+                result
             ) {
-                IntentHelper.DeleteRequestResult.Deleted -> onSystemDeleteConfirmed()
-                is IntentHelper.DeleteRequestResult.Failed -> rewindDismissedDelete()
-                is IntentHelper.DeleteRequestResult.LaunchRequest -> _deleteRequests.emit(result.request)
+                IntentHelper.DeleteRequestResult.Deleted -> confirmDismissedDelete(imageId)
+                is IntentHelper.DeleteRequestResult.Failed -> restoreDismissedDelete(imageId)
+                is IntentHelper.DeleteRequestResult.LaunchRequest -> {
+                    enqueueSystemDeleteRequest(
+                        imageId = imageId,
+                        request = result.request,
+                    )
+                }
             }
         }
 
@@ -561,43 +577,145 @@ class MainViewModel(
     }
 
     fun onSystemDeleteCancelled() {
-        rewindDismissedDelete()
-    }
-
-    fun rewindDismissedDelete() {
-        val dismissedId = pendingDeleteId ?: return
-        if (currentIndex > 0 && queueIds.getOrNull(currentIndex - 1) == dismissedId) {
-            currentIndex -= 1
-        } else if (!queueIds.contains(dismissedId)) {
-            queueIds.add(currentIndex.coerceAtMost(queueIds.size), dismissedId)
-            saveQueueIds()
-        }
-
-        pendingDeleteId = null
-        emitQueueState()
-        preloadUpcomingImages()
+        val activeRequest = activeSystemDeleteRequest ?: return
+        activeSystemDeleteRequest = null
+        restoreDismissedDelete(activeRequest.imageId)
+        dispatchNextSystemDeleteRequest()
     }
 
     fun onSystemDeleteConfirmed() {
-        val deletedId = pendingDeleteId ?: return
+        val activeRequest = activeSystemDeleteRequest ?: return
+        activeSystemDeleteRequest = null
+        confirmDismissedDelete(activeRequest.imageId)
+        dispatchNextSystemDeleteRequest()
+    }
 
-        if (currentIndex > 0 && queueIds.getOrNull(currentIndex - 1) == deletedId) {
-            queueIds.removeAt(currentIndex - 1)
-            currentIndex -= 1
-            saveQueueIds()
-            mediaCardCache.remove(deletedId)
-        } else if (queueIds.remove(deletedId)) {
-            currentIndex = currentIndex.coerceAtMost(queueIds.size)
-            saveQueueIds()
-            mediaCardCache.remove(deletedId)
+    private fun dismissCardForDelete(imageId: Long): Boolean {
+        val topId = queueIds.getOrNull(currentIndex) ?: return false
+        if (topId != imageId || pendingDeleteEntries.containsKey(imageId)) {
+            return false
         }
 
-        pendingDeleteId = null
+        pendingDeleteEntries[imageId] = PendingDeleteEntry(
+            originalIndex = currentIndex,
+        )
+
+        queueIds.removeAt(currentIndex)
+        currentIndex = currentIndex.coerceAtMost(queueIds.size)
+        saveQueueIds()
+        emitQueueState()
+        preloadUpcomingImages()
+        return true
+    }
+
+    private fun confirmDismissedDelete(imageId: Long) {
+        if (pendingDeleteEntries.remove(imageId) == null) {
+            return
+        }
+
+        pendingSystemDeleteRequests.removeAll { request -> request.imageId == imageId }
+        if (activeSystemDeleteRequest?.imageId == imageId) {
+            activeSystemDeleteRequest = null
+        }
+
+        if (queueIds.remove(imageId)) {
+            currentIndex = currentIndex.coerceAtMost(queueIds.size)
+        }
+
+        saveQueueIds()
+        mediaCardCache.remove(imageId)
         emitQueueState()
         preloadUpcomingImages()
 
         if (_isDeleteReminderEnabled.value) {
-            _deleteReminderEvents.tryEmit(DeleteReminderEvent(deletedImageId = deletedId))
+            _deleteReminderEvents.tryEmit(DeleteReminderEvent(deletedImageId = imageId))
+        }
+    }
+
+    private fun restoreDismissedDelete(imageId: Long) {
+        val pendingEntry = pendingDeleteEntries.remove(imageId) ?: return
+
+        pendingSystemDeleteRequests.removeAll { request -> request.imageId == imageId }
+        if (activeSystemDeleteRequest?.imageId == imageId) {
+            activeSystemDeleteRequest = null
+        }
+
+        if (!queueIds.contains(imageId)) {
+            val insertionIndex = pendingEntry.originalIndex.coerceIn(0, queueIds.size)
+            queueIds.add(insertionIndex, imageId)
+
+            val updatedIndex = when {
+                currentIndex == insertionIndex -> insertionIndex
+                currentIndex > insertionIndex -> currentIndex + 1
+                else -> currentIndex
+            }
+            currentIndex = updatedIndex.coerceAtMost(queueIds.size)
+        }
+
+        saveQueueIds()
+        emitQueueState()
+        preloadUpcomingImages()
+    }
+
+    private fun enqueueSystemDeleteRequest(
+        imageId: Long,
+        request: IntentSenderRequest,
+    ) {
+        if (!pendingDeleteEntries.containsKey(imageId)) {
+            return
+        }
+
+        pendingSystemDeleteRequests.removeAll { pendingRequest -> pendingRequest.imageId == imageId }
+        pendingSystemDeleteRequests.addLast(
+            SystemDeleteRequest(
+                imageId = imageId,
+                request = request,
+            ),
+        )
+        dispatchNextSystemDeleteRequest()
+    }
+
+    private fun dispatchNextSystemDeleteRequest() {
+        if (activeSystemDeleteRequest != null) {
+            return
+        }
+
+        while (pendingSystemDeleteRequests.isNotEmpty()) {
+            val nextRequest = pendingSystemDeleteRequests.removeFirst()
+            if (!pendingDeleteEntries.containsKey(nextRequest.imageId)) {
+                continue
+            }
+
+            activeSystemDeleteRequest = nextRequest
+            if (!_deleteRequests.tryEmit(nextRequest.request)) {
+                scope.launch {
+                    _deleteRequests.emit(nextRequest.request)
+                }
+            }
+            return
+        }
+    }
+
+    private fun reconcilePendingDeletesWithAvailableIds(availableIds: Set<Long>) {
+        if (pendingDeleteEntries.isEmpty()) {
+            return
+        }
+
+        val deletedIds = pendingDeleteEntries.keys
+            .filterNot { id -> availableIds.contains(id) }
+            .toSet()
+
+        if (deletedIds.isEmpty()) {
+            return
+        }
+
+        deletedIds.forEach { id -> pendingDeleteEntries.remove(id) }
+        pendingSystemDeleteRequests.removeAll { request -> deletedIds.contains(request.imageId) }
+
+        val activeRequest = activeSystemDeleteRequest
+        if (activeRequest != null && deletedIds.contains(activeRequest.imageId)) {
+            activeSystemDeleteRequest = null
+            dispatchNextSystemDeleteRequest()
         }
     }
 
@@ -1210,12 +1328,12 @@ class MainViewModel(
         }
 
         queueIds.isNotEmpty() -> HomeUiState.Loading
-        pendingDeleteId != null -> HomeUiState.Empty
+        pendingDeleteEntries.isNotEmpty() -> HomeUiState.Empty
         else -> HomeUiState.Loading
     }
 
     private fun defaultRestoredPermissionMode(): PermissionHelper.PermissionMode = when {
-        queueIds.isNotEmpty() || pendingDeleteId != null -> PermissionHelper.PermissionMode.GRANTED_ALL
+        queueIds.isNotEmpty() || pendingDeleteEntries.isNotEmpty() -> PermissionHelper.PermissionMode.GRANTED_ALL
         else -> PermissionHelper.PermissionMode.DENIED
     }
 
@@ -1223,7 +1341,6 @@ class MainViewModel(
         const val EXTERNAL_MEDIA_VOLUME = "external"
         const val KEY_QUEUE_IDS = "queue_ids"
         const val KEY_CURRENT_INDEX = "current_index"
-        const val KEY_PENDING_DELETE_ID = "pending_delete_id"
         const val KEY_PERMISSION_MODE = "permission_mode"
         const val KEY_IS_SWIPE_DELETE_ENABLED = "is_swipe_delete_enabled"
         const val KEY_IS_DELETE_REMINDER_ENABLED = "is_delete_reminder_enabled"
