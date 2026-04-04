@@ -85,6 +85,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
 
     implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation("io.github.panpf.zoomimage:zoomimage-compose-coil2-core:1.4.0")
 
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")

@@ -102,6 +102,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.photoroulette.R
 import com.example.photoroulette.BuildConfig
+import com.github.panpf.zoomimage.CoilZoomAsyncImage
+import com.github.panpf.zoomimage.compose.zoom.isNotEmpty
+import com.github.panpf.zoomimage.rememberCoilZoomState
+import com.github.panpf.zoomimage.zoom.ContinuousTransformType
+import com.github.panpf.zoomimage.zoom.GestureType
+import com.github.panpf.zoomimage.zoom.ScalesCalculator
 import com.example.photoroulette.data.datastore.SettingsRepository
 import com.example.photoroulette.model.AppReleaseInfo
 import com.example.photoroulette.model.DefaultBehaviorNoticeMode
@@ -109,6 +115,7 @@ import com.example.photoroulette.model.SilentDeleteScope
 import com.example.photoroulette.model.SwipeAction
 import com.example.photoroulette.model.UpdateCheckFeedback
 import coil.compose.AsyncImage
+import coil.imageLoader
 import coil.request.ImageRequest
 import com.example.photoroulette.ui.components.EmptyGalleryScreen
 import com.example.photoroulette.ui.components.PermissionDeniedState
@@ -2670,15 +2677,6 @@ private fun PhotoDeck(
                                 horizontal = horizontalInset,
                                 vertical = verticalInset,
                             )
-                            .then(
-                                if (isTopCard && !isTopCardImageGestureLocked) {
-                                    Modifier.clickable {
-                                        isTopCardForceFullImage = !isTopCardForceFullImage
-                                    }
-                                } else {
-                                    Modifier
-                                }
-                            )
                             .zIndex(cardZIndex),
                         enabled = isTopCard && !isTopCardImageGestureLocked,
                         gestureSensitivity = swipeGestureSensitivity,
@@ -2732,6 +2730,11 @@ private fun PhotoDeck(
                             } else {
                                 {}
                             },
+                            onTapWhenIdle = if (isTopCard) {
+                                { isTopCardForceFullImage = !isTopCardForceFullImage }
+                            } else {
+                                {}
+                            },
                         )
                     }
                 }
@@ -2746,10 +2749,10 @@ private fun PhotoCardImage(
     showFullImage: Boolean,
     enableTwoFingerTransform: Boolean,
     onGestureLockChanged: (Boolean) -> Unit,
+    onTapWhenIdle: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val gestureScope = rememberCoroutineScope()
     val request = remember(context, imageId) {
         ImageRequest.Builder(context)
             .data(IntentHelper.buildImageUri(imageId))
@@ -2758,121 +2761,21 @@ private fun PhotoCardImage(
     }
 
     var visualState by remember(imageId) { mutableStateOf(PhotoVisualState.Loading) }
-    var imageScale by remember(imageId) { mutableFloatStateOf(MIN_PHOTO_GESTURE_SCALE) }
-    var imageOffset by remember(imageId) { mutableStateOf(Offset.Zero) }
-    var containerSize by remember(imageId) { mutableStateOf(IntSize.Zero) }
-    var hasTwoFingerTransformActive by remember(imageId) { mutableStateOf(false) }
-    var resetTransformJob by remember(imageId) { mutableStateOf<Job?>(null) }
     val currentOnGestureLockChanged by rememberUpdatedState(onGestureLockChanged)
+    val currentOnTapWhenIdle by rememberUpdatedState(onTapWhenIdle)
     val placeholderPainter = ColorPainter(
         MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.24f),
     )
     val transparentPainter = remember { ColorPainter(Color.Transparent) }
 
-    fun clampImageOffset(target: Offset, scale: Float): Offset {
-        if (containerSize.width <= 0 || containerSize.height <= 0) {
-            return Offset.Zero
+    LaunchedEffect(enableTwoFingerTransform) {
+        if (!enableTwoFingerTransform) {
+            currentOnGestureLockChanged(false)
         }
-
-        val maxX = (containerSize.width.toFloat() * (scale - 1f) / 2f).coerceAtLeast(0f)
-        val maxY = (containerSize.height.toFloat() * (scale - 1f) / 2f).coerceAtLeast(0f)
-
-        return Offset(
-            x = target.x.coerceIn(-maxX, maxX),
-            y = target.y.coerceIn(-maxY, maxY),
-        )
-    }
-
-    fun shouldLockCardGestures(
-        scale: Float,
-        offset: Offset,
-        hasTwoFingerGestureActive: Boolean,
-    ): Boolean {
-        val offsetDistance = offset.getDistanceValue()
-        val horizontalOffsetAbs = abs(offset.x)
-        val verticalOffsetAbs = abs(offset.y)
-
-        val scaleLocked = scale > MIN_PHOTO_GESTURE_SCALE + PHOTO_GESTURE_LOCK_SCALE_EPSILON
-        val horizontalStillAtEdge = horizontalOffsetAbs <= PHOTO_GESTURE_AXIS_UNLOCK_EPSILON
-        val verticalStillAtEdge = verticalOffsetAbs <= PHOTO_GESTURE_AXIS_UNLOCK_EPSILON
-
-        return hasTwoFingerGestureActive ||
-            scaleLocked ||
-            (offsetDistance > PHOTO_GESTURE_OFFSET_LOCK_EPSILON &&
-                !horizontalStillAtEdge &&
-                !verticalStillAtEdge)
-    }
-
-    fun cancelResetTransformAnimation() {
-        resetTransformJob?.cancel()
-        resetTransformJob = null
-    }
-
-    suspend fun animateResetTransform() {
-        val startScale = imageScale
-        val startOffset = imageOffset
-
-        if (
-            startScale <= MIN_PHOTO_GESTURE_SCALE + PHOTO_GESTURE_LOCK_SCALE_EPSILON &&
-            startOffset.getDistanceValue() <= PHOTO_GESTURE_OFFSET_LOCK_EPSILON
-        ) {
-            imageScale = MIN_PHOTO_GESTURE_SCALE
-            imageOffset = Offset.Zero
-            return
-        }
-
-        coroutineScope {
-            launch {
-                val scaleAnim = Animatable(startScale)
-                scaleAnim.animateTo(
-                    targetValue = MIN_PHOTO_GESTURE_SCALE,
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessMediumLow,
-                    ),
-                ) {
-                    imageScale = value
-                }
-            }
-
-            launch {
-                val offsetAnim = Animatable(
-                    initialValue = startOffset,
-                    typeConverter = Offset.VectorConverter,
-                )
-                offsetAnim.animateTo(
-                    targetValue = Offset.Zero,
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioNoBouncy,
-                        stiffness = Spring.StiffnessMediumLow,
-                    ),
-                ) {
-                    imageOffset = value
-                }
-            }
-        }
-
-        imageScale = MIN_PHOTO_GESTURE_SCALE
-        imageOffset = Offset.Zero
-    }
-
-    val cardGestureLocked = shouldLockCardGestures(
-        scale = imageScale,
-        offset = imageOffset,
-        hasTwoFingerGestureActive = hasTwoFingerTransformActive,
-    )
-
-    val canTapToResetTransform =
-        imageScale > MIN_PHOTO_GESTURE_SCALE + PHOTO_GESTURE_LOCK_SCALE_EPSILON ||
-            imageOffset.getDistanceValue() > PHOTO_GESTURE_OFFSET_LOCK_EPSILON
-
-    LaunchedEffect(cardGestureLocked) {
-        currentOnGestureLockChanged(cardGestureLocked)
     }
 
     DisposableEffect(currentOnGestureLockChanged) {
         onDispose {
-            cancelResetTransformAnimation()
             currentOnGestureLockChanged(false)
         }
     }
@@ -2880,10 +2783,6 @@ private fun PhotoCardImage(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .onSizeChanged { size ->
-                containerSize = size
-                imageOffset = clampImageOffset(imageOffset, imageScale)
-            }
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
@@ -2891,113 +2790,7 @@ private fun PhotoCardImage(
                         MaterialTheme.colorScheme.surfaceContainer,
                     ),
                 ),
-            )
-            .pointerInput(enableTwoFingerTransform, imageId, containerSize) {
-                if (!enableTwoFingerTransform) {
-                    hasTwoFingerTransformActive = false
-                    return@pointerInput
-                }
-
-                awaitEachGesture {
-                    awaitFirstDown(requireUnconsumed = false)
-                    cancelResetTransformAnimation()
-                    hasTwoFingerTransformActive = false
-
-                    while (true) {
-                        val event = awaitPointerEvent()
-                        val activePointers = event.changes.count { it.pressed }
-                        if (activePointers == 0) {
-                            break
-                        }
-                        val shouldTransform =
-                            activePointers >= 2 &&
-                                containerSize.width > 0 &&
-                                containerSize.height > 0
-                        hasTwoFingerTransformActive = shouldTransform
-
-                        if (shouldTransform) {
-                            val zoomChange = event.calculateZoom()
-                            val panChange = event.calculatePan()
-                            val centroid = event.calculateCentroid(useCurrent = true)
-                            if (!zoomChange.isFinite() || zoomChange <= 0f || !centroid.isSpecified) {
-                                event.changes.forEach { change ->
-                                    if (change.pressed) {
-                                        change.consume()
-                                    }
-                                }
-                                continue
-                            }
-
-                            val currentScale = imageScale
-                            val rawNextScale = (currentScale * zoomChange).coerceIn(
-                                MIN_PHOTO_GESTURE_SCALE,
-                                MAX_PHOTO_GESTURE_SCALE,
-                            )
-                            val nextScale = if (
-                                rawNextScale <= MIN_PHOTO_GESTURE_SCALE + PHOTO_GESTURE_RESET_SNAP_EPSILON
-                            ) {
-                                MIN_PHOTO_GESTURE_SCALE
-                            } else {
-                                rawNextScale
-                            }
-                            val scaleRatio = if (currentScale > PHOTO_GESTURE_EPSILON) {
-                                nextScale / currentScale
-                            } else {
-                                1f
-                            }
-                            val containerCenter = Offset(
-                                x = containerSize.width / 2f,
-                                y = containerSize.height / 2f,
-                            )
-                            val nextOffset = if (
-                                nextScale <= MIN_PHOTO_GESTURE_SCALE + PHOTO_GESTURE_EPSILON
-                            ) {
-                                Offset.Zero
-                            } else {
-                                clampImageOffset(
-                                    target =
-                                        (imageOffset * scaleRatio) +
-                                            ((centroid - containerCenter) * (1f - scaleRatio)) +
-                                            panChange,
-                                    scale = nextScale,
-                                )
-                            }
-
-                            imageScale = nextScale
-                            imageOffset = nextOffset
-                            event.changes.forEach { change -> change.consume() }
-                        } else if (imageScale > MIN_PHOTO_GESTURE_SCALE + PHOTO_GESTURE_LOCK_SCALE_EPSILON) {
-                            event.changes.forEach { change ->
-                                if (change.positionChange() != Offset.Zero) {
-                                    change.consume()
-                                }
-                            }
-                        }
-                    }
-
-                    hasTwoFingerTransformActive = false
-                }
-            }
-            .pointerInput(enableTwoFingerTransform, canTapToResetTransform, imageId) {
-                if (!enableTwoFingerTransform || !canTapToResetTransform) {
-                    return@pointerInput
-                }
-
-                detectTapGestures(
-                    onTap = {
-                        cancelResetTransformAnimation()
-                        resetTransformJob = gestureScope.launch {
-                            animateResetTransform()
-                        }.also { job ->
-                            job.invokeOnCompletion {
-                                if (resetTransformJob == job) {
-                                    resetTransformJob = null
-                                }
-                            }
-                        }
-                    },
-                )
-            },
+            ),
     ) {
         if (visualState != PhotoVisualState.Ready) {
             PhotoFallbackContent(
@@ -3006,25 +2799,65 @@ private fun PhotoCardImage(
             )
         }
 
-        AsyncImage(
-            model = request,
-            contentDescription = stringResource(id = R.string.photo_content_description),
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer {
-                    scaleX = imageScale
-                    scaleY = imageScale
-                    translationX = imageOffset.x
-                    translationY = imageOffset.y
+        if (enableTwoFingerTransform) {
+            val zoomState = rememberCoilZoomState()
+            val zoomableState = zoomState.zoomable
+            val hasUserTransform = zoomableState.userTransform.isNotEmpty()
+            val cardGestureLocked =
+                hasUserTransform ||
+                    zoomableState.continuousTransformType != ContinuousTransformType.NONE
+
+            LaunchedEffect(zoomableState) {
+                zoomableState.setLimitOffsetWithinBaseVisibleRect(true)
+                zoomableState.setScalesCalculator(ScalesCalculator.fixed(2f))
+                zoomableState.setThreeStepScale(false)
+                zoomableState.setRubberBandScale(false)
+                zoomableState.setKeepTransformWhenSameAspectRatioContentSizeChanged(false)
+                zoomableState.setDisabledGestureTypes(
+                    GestureType.ONE_FINGER_SCALE or GestureType.DOUBLE_TAP_SCALE,
+                )
+            }
+
+            LaunchedEffect(cardGestureLocked) {
+                currentOnGestureLockChanged(cardGestureLocked)
+            }
+
+            CoilZoomAsyncImage(
+                model = request,
+                contentDescription = stringResource(id = R.string.photo_content_description),
+                imageLoader = context.imageLoader,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = if (showFullImage) ContentScale.Fit else ContentScale.Crop,
+                placeholder = placeholderPainter,
+                error = transparentPainter,
+                fallback = transparentPainter,
+                zoomState = zoomState,
+                scrollBar = null,
+                onLoading = { visualState = PhotoVisualState.Loading },
+                onSuccess = { visualState = PhotoVisualState.Ready },
+                onError = { visualState = PhotoVisualState.Error },
+                onTap = {
+                    if (zoomableState.userTransform.isNotEmpty()) {
+                        zoomableState.reset()
+                    } else {
+                        currentOnTapWhenIdle()
+                    }
                 },
-            contentScale = if (showFullImage) ContentScale.Fit else ContentScale.Crop,
-            placeholder = placeholderPainter,
-            error = transparentPainter,
-            fallback = transparentPainter,
-            onLoading = { visualState = PhotoVisualState.Loading },
-            onSuccess = { visualState = PhotoVisualState.Ready },
-            onError = { visualState = PhotoVisualState.Error },
-        )
+            )
+        } else {
+            AsyncImage(
+                model = request,
+                contentDescription = stringResource(id = R.string.photo_content_description),
+                modifier = Modifier.fillMaxSize(),
+                contentScale = if (showFullImage) ContentScale.Fit else ContentScale.Crop,
+                placeholder = placeholderPainter,
+                error = transparentPainter,
+                fallback = transparentPainter,
+                onLoading = { visualState = PhotoVisualState.Loading },
+                onSuccess = { visualState = PhotoVisualState.Ready },
+                onError = { visualState = PhotoVisualState.Error },
+            )
+        }
     }
 }
 
@@ -3117,13 +2950,6 @@ private fun canSwipeForAction(
 
 private const val CARD_ASPECT_RATIO = 0.72f
 private const val BACK_CARD_REVEAL_MULTIPLIER = 0.72f
-private const val MIN_PHOTO_GESTURE_SCALE = 1f
-private const val MAX_PHOTO_GESTURE_SCALE = 4f
-private const val PHOTO_GESTURE_EPSILON = 0.0001f
-private const val PHOTO_GESTURE_LOCK_SCALE_EPSILON = 0.02f
-private const val PHOTO_GESTURE_OFFSET_LOCK_EPSILON = 0.5f
-private const val PHOTO_GESTURE_AXIS_UNLOCK_EPSILON = 0.8f
-private const val PHOTO_GESTURE_RESET_SNAP_EPSILON = 0.03f
 private val CARD_LAYER_INSET = 12.dp
 private val MAX_DECK_WIDTH = 460.dp
 private val FLOATING_DELETE_BUTTON_SIZE = 54.dp
