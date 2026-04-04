@@ -1,5 +1,7 @@
 package com.example.photoroulette.ui.components
 
+import android.graphics.Rect
+import android.os.Build
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.VectorConverter
@@ -22,6 +24,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,7 +34,11 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntSize
@@ -49,11 +56,17 @@ enum class SwipeDirection {
     Down,
 }
 
+private enum class DragAxis {
+    Horizontal,
+    Vertical,
+}
+
 @Composable
 fun SwipeableCard(
     onSwiped: (SwipeDirection) -> Boolean,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    gestureSensitivity: Float = DEFAULT_GESTURE_SENSITIVITY,
     canSwipeLeft: Boolean = true,
     canSwipeRight: Boolean = true,
     canSwipeUp: Boolean = true,
@@ -65,6 +78,11 @@ fun SwipeableCard(
     content: @Composable BoxScope.() -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    val hostView = LocalView.current
+    val density = LocalDensity.current
+    val exclusionStripWidthPx = remember(density) {
+        with(density) { SYSTEM_GESTURE_EXCLUSION_EDGE_WIDTH.toPx() }
+    }
 
     val currentOnSwiped by rememberUpdatedState(onSwiped)
     val currentOnDragProgressChanged by rememberUpdatedState(onDragProgressChanged)
@@ -72,6 +90,9 @@ fun SwipeableCard(
     val currentCanSwipeRight by rememberUpdatedState(canSwipeRight)
     val currentCanSwipeUp by rememberUpdatedState(canSwipeUp)
     val currentCanSwipeDown by rememberUpdatedState(canSwipeDown)
+    val currentGestureSensitivity by rememberUpdatedState(
+        gestureSensitivity.coerceIn(MIN_GESTURE_SENSITIVITY, MAX_GESTURE_SENSITIVITY),
+    )
 
     var cardSize by remember { mutableStateOf(IntSize.Zero) }
     var offsetX by remember { mutableFloatStateOf(0f) }
@@ -79,6 +100,7 @@ fun SwipeableCard(
     var isSettling by remember { mutableStateOf(false) }
     var settleJob by remember { mutableStateOf<Job?>(null) }
     var lastReportedProgress by remember { mutableFloatStateOf(0f) }
+    var gestureExclusionRects by remember { mutableStateOf<List<Rect>>(emptyList()) }
 
     fun reportDragProgress(progress: Float, force: Boolean = false) {
         if (force || abs(progress - lastReportedProgress) >= DRAG_PROGRESS_EPSILON) {
@@ -108,12 +130,49 @@ fun SwipeableCard(
         }
     }
 
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && enabled) {
+        SideEffect {
+            hostView.systemGestureExclusionRects = gestureExclusionRects
+        }
+
+        DisposableEffect(hostView) {
+            onDispose {
+                hostView.systemGestureExclusionRects = emptyList()
+            }
+        }
+    }
+
     val underlayScale = restingScale.coerceIn(MIN_UNDERLAY_SCALE, 1f) +
         ((1f - restingScale.coerceIn(MIN_UNDERLAY_SCALE, 1f)) * revealProgress.coerceIn(0f, 1f))
 
     Box(
         modifier = modifier
             .onSizeChanged { cardSize = it }
+            .onGloballyPositioned { coordinates ->
+                if (!enabled) {
+                    gestureExclusionRects = emptyList()
+                    return@onGloballyPositioned
+                }
+
+                val bounds = coordinates.boundsInRoot()
+                if (bounds.width <= 0f || bounds.height <= 0f) {
+                    gestureExclusionRects = emptyList()
+                    return@onGloballyPositioned
+                }
+
+                val left = bounds.left.toInt()
+                val top = bounds.top.toInt()
+                val right = bounds.right.toInt()
+                val bottom = bounds.bottom.toInt()
+                val stripWidth = exclusionStripWidthPx.toInt().coerceAtLeast(1)
+                val leftStripRight = (left + stripWidth).coerceAtMost(right)
+                val rightStripLeft = (right - stripWidth).coerceAtLeast(left)
+
+                gestureExclusionRects = listOf(
+                    Rect(left, top, leftStripRight, bottom),
+                    Rect(rightStripLeft, top, right, bottom),
+                )
+            }
             .graphicsLayer {
                 translationX = if (enabled) offsetX else 0f
                 translationY = if (enabled) offsetY else 0f
@@ -126,10 +185,11 @@ fun SwipeableCard(
             .clip(shape)
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .then(
-                if (enabled && !isSettling) {
+                if (enabled) {
                     Modifier.pointerInput(
                         enabled,
                         cardSize,
+                        gestureSensitivity,
                         canSwipeLeft,
                         canSwipeRight,
                         canSwipeUp,
@@ -141,35 +201,64 @@ fun SwipeableCard(
                             isSettling = false
 
                             var activePointerId = down.id
-                            val touchSlop = viewConfiguration.touchSlop
+                            val touchSlopScale = 1f +
+                                ((currentGestureSensitivity - DEFAULT_GESTURE_SENSITIVITY) *
+                                    TOUCH_SLOP_SENSITIVITY_FACTOR)
+                            val touchSlop =
+                                (viewConfiguration.touchSlop / touchSlopScale).coerceAtLeast(MIN_TOUCH_SLOP)
                             var accumulatedDrag = Offset.Zero
                             var hasCrossedTouchSlop = false
                             var hasDraggedCard = false
                             var cancelledByMultiTouch = false
+                            var dominantAxis: DragAxis? = null
+
+                            fun resolveDominantAxis(delta: Offset): DragAxis? {
+                                val absX = abs(delta.x)
+                                val absY = abs(delta.y)
+                                return when {
+                                    absX >= absY * AXIS_LOCK_DOMINANCE_RATIO -> DragAxis.Horizontal
+                                    absY >= absX * AXIS_LOCK_DOMINANCE_RATIO -> DragAxis.Vertical
+                                    else -> null
+                                }
+                            }
 
                             fun applyDragDelta(rawDelta: Offset) {
+                                val normalizedDelta = when (dominantAxis) {
+                                    DragAxis.Horizontal -> Offset(
+                                        x = rawDelta.x,
+                                        y = rawDelta.y * AXIS_LOCK_CROSS_DAMPING,
+                                    )
+
+                                    DragAxis.Vertical -> Offset(
+                                        x = rawDelta.x * AXIS_LOCK_CROSS_DAMPING,
+                                        y = rawDelta.y,
+                                    )
+
+                                    null -> rawDelta
+                                }
+
                                 val dampedDeltaX = when {
-                                    rawDelta.x < 0f && !currentCanSwipeLeft -> {
-                                        rawDelta.x * BLOCKED_DIRECTION_DRAG_FRICTION
+                                    normalizedDelta.x < 0f && !currentCanSwipeLeft -> {
+                                        normalizedDelta.x * BLOCKED_DIRECTION_DRAG_FRICTION
                                     }
 
-                                    rawDelta.x > 0f && !currentCanSwipeRight -> {
-                                        rawDelta.x * BLOCKED_DIRECTION_DRAG_FRICTION
+                                    normalizedDelta.x > 0f && !currentCanSwipeRight -> {
+                                        normalizedDelta.x * BLOCKED_DIRECTION_DRAG_FRICTION
                                     }
 
-                                    else -> rawDelta.x
+                                    else -> normalizedDelta.x
                                 }
 
                                 val dampedDeltaY = when {
-                                    rawDelta.y < 0f && !currentCanSwipeUp -> {
-                                        rawDelta.y * BLOCKED_DIRECTION_DRAG_FRICTION
+                                    normalizedDelta.y < 0f && !currentCanSwipeUp -> {
+                                        normalizedDelta.y * BLOCKED_DIRECTION_DRAG_FRICTION
                                     }
 
-                                    rawDelta.y > 0f && !currentCanSwipeDown -> {
-                                        rawDelta.y * BLOCKED_DIRECTION_DRAG_FRICTION
+                                    normalizedDelta.y > 0f && !currentCanSwipeDown -> {
+                                        normalizedDelta.y * BLOCKED_DIRECTION_DRAG_FRICTION
                                     }
 
-                                    else -> rawDelta.y
+                                    else -> normalizedDelta.y
                                 }
 
                                 offsetX += dampedDeltaX
@@ -181,6 +270,7 @@ fun SwipeableCard(
                                         offsetX = offsetX,
                                         offsetY = offsetY,
                                         cardSize = cardSize,
+                                        gestureSensitivity = currentGestureSensitivity,
                                     ),
                                 )
                             }
@@ -219,10 +309,20 @@ fun SwipeableCard(
                                                 x = accumulatedDrag.x - (directionX * touchSlop),
                                                 y = accumulatedDrag.y - (directionY * touchSlop),
                                             )
+                                            dominantAxis = resolveDominantAxis(accumulatedDrag)
+                                            if (dominantAxis == DragAxis.Horizontal) {
+                                                hostView.parent?.requestDisallowInterceptTouchEvent(true)
+                                            }
                                             applyDragDelta(overSlop)
                                             accumulatedDrag = Offset.Zero
                                         }
                                     } else {
+                                        if (dominantAxis == null) {
+                                            dominantAxis = resolveDominantAxis(delta)
+                                            if (dominantAxis == DragAxis.Horizontal) {
+                                                hostView.parent?.requestDisallowInterceptTouchEvent(true)
+                                            }
+                                        }
                                         applyDragDelta(delta)
                                     }
 
@@ -252,6 +352,7 @@ fun SwipeableCard(
                                                 offsetX = x,
                                                 offsetY = y,
                                                 cardSize = cardSize,
+                                                gestureSensitivity = currentGestureSensitivity,
                                             ),
                                         )
                                     }
@@ -269,6 +370,7 @@ fun SwipeableCard(
                                     canSwipeRight = currentCanSwipeRight,
                                     canSwipeUp = currentCanSwipeUp,
                                     canSwipeDown = currentCanSwipeDown,
+                                    gestureSensitivity = currentGestureSensitivity,
                                 )
 
                                 if (decision == null) {
@@ -285,6 +387,7 @@ fun SwipeableCard(
                                                 offsetX = x,
                                                 offsetY = y,
                                                 cardSize = cardSize,
+                                                gestureSensitivity = currentGestureSensitivity,
                                             ),
                                         )
                                     }
@@ -307,6 +410,7 @@ fun SwipeableCard(
                                             offsetX = x,
                                             offsetY = y,
                                             cardSize = cardSize,
+                                            gestureSensitivity = currentGestureSensitivity,
                                         ),
                                     )
                                 }
@@ -326,6 +430,7 @@ fun SwipeableCard(
                                                 offsetX = x,
                                                 offsetY = y,
                                                 cardSize = cardSize,
+                                                gestureSensitivity = currentGestureSensitivity,
                                             ),
                                         )
                                     }
@@ -338,6 +443,8 @@ fun SwipeableCard(
                                 isSettling = false
                                 settleJob = null
                             }
+
+                            hostView.parent?.requestDisallowInterceptTouchEvent(false)
                         }
                     }
                 } else {
@@ -364,6 +471,7 @@ private fun resolveSwipeDecision(
     canSwipeRight: Boolean,
     canSwipeUp: Boolean,
     canSwipeDown: Boolean,
+    gestureSensitivity: Float,
 ): SwipeDecision? {
     val width = cardSize.width.toFloat()
     val height = cardSize.height.toFloat()
@@ -372,8 +480,12 @@ private fun resolveSwipeDecision(
         return null
     }
 
-    val horizontalThreshold = width * HORIZONTAL_DISMISS_THRESHOLD_FRACTION
-    val verticalThreshold = height * VERTICAL_DISMISS_THRESHOLD_FRACTION
+    val thresholdScale =
+        (DEFAULT_GESTURE_SENSITIVITY / gestureSensitivity.coerceAtLeast(MIN_GESTURE_SENSITIVITY))
+            .coerceIn(MIN_THRESHOLD_SCALE, MAX_THRESHOLD_SCALE)
+
+    val horizontalThreshold = width * HORIZONTAL_DISMISS_THRESHOLD_FRACTION * thresholdScale
+    val verticalThreshold = height * VERTICAL_DISMISS_THRESHOLD_FRACTION * thresholdScale
 
     val horizontalDecision = when {
         offsetX <= -horizontalThreshold && canSwipeLeft -> SwipeDecision(
@@ -456,18 +568,23 @@ private fun calculateDragProgress(
     offsetX: Float,
     offsetY: Float,
     cardSize: IntSize,
+    gestureSensitivity: Float,
 ): Float {
     val width = cardSize.width.toFloat().coerceAtLeast(1f)
     val height = cardSize.height.toFloat().coerceAtLeast(1f)
     val distance = hypot(offsetX.toDouble(), offsetY.toDouble()).toFloat()
+    val thresholdScale =
+        (DEFAULT_GESTURE_SENSITIVITY / gestureSensitivity.coerceAtLeast(MIN_GESTURE_SENSITIVITY))
+            .coerceIn(MIN_THRESHOLD_SCALE, MAX_THRESHOLD_SCALE)
     val dismissDistance = hypot(
-        (width * HORIZONTAL_DISMISS_THRESHOLD_FRACTION).toDouble(),
-        (height * VERTICAL_DISMISS_THRESHOLD_FRACTION).toDouble(),
+        (width * HORIZONTAL_DISMISS_THRESHOLD_FRACTION * thresholdScale).toDouble(),
+        (height * VERTICAL_DISMISS_THRESHOLD_FRACTION * thresholdScale).toDouble(),
     ).toFloat().coerceAtLeast(1f)
 
     return (distance / dismissDistance).coerceIn(0f, 1f)
 }
 
+private val SYSTEM_GESTURE_EXCLUSION_EDGE_WIDTH = 24.dp
 private const val HORIZONTAL_DISMISS_THRESHOLD_FRACTION = 0.22f
 private const val VERTICAL_DISMISS_THRESHOLD_FRACTION = 0.22f
 private const val SWIPE_OUT_DISTANCE_MULTIPLIER = 1.38f
@@ -476,6 +593,15 @@ private const val OUT_SWIPE_CROSS_AXIS_FACTOR = 0.35f
 private const val ROTATION_DIVISOR = 18f
 private const val MIN_UNDERLAY_SCALE = 0.90f
 private const val DRAG_PROGRESS_EPSILON = 0.006f
+private const val MIN_GESTURE_SENSITIVITY = 0.8f
+private const val MAX_GESTURE_SENSITIVITY = 1.35f
+private const val DEFAULT_GESTURE_SENSITIVITY = 1f
+private const val MIN_TOUCH_SLOP = 6f
+private const val TOUCH_SLOP_SENSITIVITY_FACTOR = 1.28f
+private const val AXIS_LOCK_DOMINANCE_RATIO = 1.28f
+private const val AXIS_LOCK_CROSS_DAMPING = 0.28f
+private const val MIN_THRESHOLD_SCALE = 0.8f
+private const val MAX_THRESHOLD_SCALE = 1.25f
 
 @Preview(showBackground = true, backgroundColor = 0xFFF2EFE8)
 @Composable

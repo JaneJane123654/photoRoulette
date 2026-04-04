@@ -2,6 +2,7 @@ package com.example.photoroulette.ui.screens
 
 import android.view.HapticFeedbackConstants
 import android.view.SoundEffectConstants
+import android.widget.Toast
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.VectorConverter
@@ -122,6 +123,7 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 @Composable
@@ -138,6 +140,8 @@ fun MainScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val permissionMode by viewModel.permissionMode.collectAsStateWithLifecycle()
     val isSwipeDeleteEnabled by viewModel.isSwipeDeleteEnabled.collectAsStateWithLifecycle()
+    val isDeleteReminderEnabled by viewModel.isDeleteReminderEnabled.collectAsStateWithLifecycle()
+    val swipeGestureSensitivity by viewModel.swipeGestureSensitivity.collectAsStateWithLifecycle()
     val showFullImage by viewModel.showFullImage.collectAsStateWithLifecycle()
     val showFloatingDeleteButton by viewModel.showFloatingDeleteButton.collectAsStateWithLifecycle()
     val isGestureBallEnabled by viewModel.isGestureBallEnabled.collectAsStateWithLifecycle()
@@ -172,6 +176,8 @@ fun MainScreen(
         state = uiState,
         permissionMode = permissionMode,
         isSwipeDeleteEnabled = isSwipeDeleteEnabled,
+        isDeleteReminderEnabled = isDeleteReminderEnabled,
+        swipeGestureSensitivity = swipeGestureSensitivity,
         showFullImage = showFullImage,
         showFloatingDeleteButton = showFloatingDeleteButton,
         isGestureBallEnabled = isGestureBallEnabled,
@@ -197,6 +203,8 @@ fun MainScreen(
         onPermissionRationaleDismissed = onPermissionRationaleDismissed,
         onRefresh = viewModel::refreshMedia,
         onSwipeDeleteEnabledChange = viewModel::setSwipeDeleteEnabled,
+        onDeleteReminderEnabledChange = viewModel::setDeleteReminderEnabled,
+        onSwipeGestureSensitivityChange = viewModel::setSwipeGestureSensitivity,
         onShowFullImageChange = viewModel::setShowFullImage,
         onShowFloatingDeleteButtonChange = viewModel::setShowFloatingDeleteButton,
         onGestureBallEnabledChange = viewModel::setGestureBallEnabled,
@@ -227,6 +235,17 @@ fun MainScreen(
         modifier = modifier,
     )
 
+    val context = LocalContext.current
+    LaunchedEffect(viewModel, context) {
+        viewModel.deleteReminderEvents.collectLatest {
+            Toast.makeText(
+                context,
+                context.getString(R.string.delete_reminder_toast),
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
+    }
+
     LaunchedEffect(Unit) {
         viewModel.checkForUpdatesOnLaunchIfNeeded()
     }
@@ -237,6 +256,8 @@ private fun MainScreenContent(
     state: HomeUiState,
     permissionMode: PermissionHelper.PermissionMode,
     isSwipeDeleteEnabled: Boolean,
+    isDeleteReminderEnabled: Boolean,
+    swipeGestureSensitivity: Float,
     showFullImage: Boolean,
     showFloatingDeleteButton: Boolean,
     isGestureBallEnabled: Boolean,
@@ -262,6 +283,8 @@ private fun MainScreenContent(
     onPermissionRationaleDismissed: () -> Unit,
     onRefresh: () -> Unit,
     onSwipeDeleteEnabledChange: (Boolean) -> Unit,
+    onDeleteReminderEnabledChange: (Boolean) -> Unit,
+    onSwipeGestureSensitivityChange: (Float) -> Unit,
     onShowFullImageChange: (Boolean) -> Unit,
     onShowFloatingDeleteButtonChange: (Boolean) -> Unit,
     onGestureBallEnabledChange: (Boolean) -> Unit,
@@ -378,6 +401,7 @@ private fun MainScreenContent(
                             canSwipePrevious = effectiveState.canSwipeToPrevious,
                             canSwipeNext = effectiveState.canSwipeToNext,
                             isSwipeDeleteEnabled = isSwipeDeleteEnabled,
+                            swipeGestureSensitivity = swipeGestureSensitivity,
                             swipeLeftAction = swipeLeftAction,
                             swipeRightAction = swipeRightAction,
                             swipeUpAction = swipeUpAction,
@@ -460,6 +484,8 @@ private fun MainScreenContent(
     if (effectiveState != HomeUiState.PermissionDenied && isSettingsDialogVisible) {
         SettingsDialog(
             isSwipeDeleteEnabled = isSwipeDeleteEnabled,
+            isDeleteReminderEnabled = isDeleteReminderEnabled,
+            swipeGestureSensitivity = swipeGestureSensitivity,
             showFullImage = showFullImage,
             showFloatingDeleteButton = showFloatingDeleteButton,
             isGestureBallEnabled = isGestureBallEnabled,
@@ -478,6 +504,8 @@ private fun MainScreenContent(
             selectedLanguageTag = selectedLanguageTag,
             onDismiss = { isSettingsDialogVisible = false },
             onSwipeDeleteEnabledChange = onSwipeDeleteEnabledChange,
+            onDeleteReminderEnabledChange = onDeleteReminderEnabledChange,
+            onSwipeGestureSensitivityChange = onSwipeGestureSensitivityChange,
             onShowFullImageChange = onShowFullImageChange,
             onShowFloatingDeleteButtonChange = onShowFloatingDeleteButtonChange,
             onGestureBallEnabledChange = onGestureBallEnabledChange,
@@ -837,6 +865,8 @@ private fun SettingsEntryCard(
 @Composable
 private fun SettingsDialog(
     isSwipeDeleteEnabled: Boolean,
+    isDeleteReminderEnabled: Boolean,
+    swipeGestureSensitivity: Float,
     showFullImage: Boolean,
     showFloatingDeleteButton: Boolean,
     isGestureBallEnabled: Boolean,
@@ -856,6 +886,8 @@ private fun SettingsDialog(
     selectedLanguageTag: String,
     onDismiss: () -> Unit,
     onSwipeDeleteEnabledChange: (Boolean) -> Unit,
+    onDeleteReminderEnabledChange: (Boolean) -> Unit,
+    onSwipeGestureSensitivityChange: (Float) -> Unit,
     onShowFullImageChange: (Boolean) -> Unit,
     onShowFloatingDeleteButtonChange: (Boolean) -> Unit,
     onGestureBallEnabledChange: (Boolean) -> Unit,
@@ -922,10 +954,12 @@ private fun SettingsDialog(
                     swipeRightAction = swipeRightAction,
                     swipeUpAction = swipeUpAction,
                     swipeDownAction = swipeDownAction,
+                    swipeGestureSensitivity = swipeGestureSensitivity,
                     onSwipeLeftActionChange = onSwipeLeftActionChange,
                     onSwipeRightActionChange = onSwipeRightActionChange,
                     onSwipeUpActionChange = onSwipeUpActionChange,
                     onSwipeDownActionChange = onSwipeDownActionChange,
+                    onSwipeGestureSensitivityChange = onSwipeGestureSensitivityChange,
                 )
                 GestureBallControls(
                     isGestureBallEnabled = isGestureBallEnabled,
@@ -942,6 +976,10 @@ private fun SettingsDialog(
                 SwipeDeleteControls(
                     isSwipeDeleteEnabled = isSwipeDeleteEnabled,
                     onCheckedChange = onSwipeDeleteEnabledChange,
+                )
+                DeleteReminderControls(
+                    isEnabled = isDeleteReminderEnabled,
+                    onCheckedChange = onDeleteReminderEnabledChange,
                 )
                 FloatingDeleteButtonControls(
                     isEnabled = showFloatingDeleteButton,
@@ -2144,6 +2182,52 @@ private fun SwipeDeleteControls(
 }
 
 @Composable
+private fun DeleteReminderControls(
+    isEnabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 18.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = stringResource(id = R.string.delete_reminder_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = if (isEnabled) {
+                        stringResource(id = R.string.delete_reminder_enabled_description)
+                    } else {
+                        stringResource(id = R.string.delete_reminder_disabled_description)
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            Switch(
+                checked = isEnabled,
+                onCheckedChange = onCheckedChange,
+            )
+        }
+    }
+}
+
+@Composable
 private fun SilentDeleteControls(
     isSilentDeleteEnabled: Boolean,
     dcimLabel: String?,
@@ -2302,10 +2386,12 @@ private fun SwipeBehaviorControls(
     swipeRightAction: SwipeAction,
     swipeUpAction: SwipeAction,
     swipeDownAction: SwipeAction,
+    swipeGestureSensitivity: Float,
     onSwipeLeftActionChange: (SwipeAction) -> Unit,
     onSwipeRightActionChange: (SwipeAction) -> Unit,
     onSwipeUpActionChange: (SwipeAction) -> Unit,
     onSwipeDownActionChange: (SwipeAction) -> Unit,
+    onSwipeGestureSensitivityChange: (Float) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val options = listOf(
@@ -2335,6 +2421,29 @@ private fun SwipeBehaviorControls(
             Text(
                 text = stringResource(id = R.string.swipe_behavior_description),
                 style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Text(
+                text = stringResource(
+                    id = R.string.swipe_sensitivity_label,
+                    (swipeGestureSensitivity * 100f).roundToInt(),
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Medium,
+            )
+
+            Slider(
+                value = swipeGestureSensitivity,
+                onValueChange = onSwipeGestureSensitivityChange,
+                valueRange = SettingsRepository.MIN_SWIPE_GESTURE_SENSITIVITY..
+                    SettingsRepository.MAX_SWIPE_GESTURE_SENSITIVITY,
+            )
+
+            Text(
+                text = stringResource(id = R.string.swipe_sensitivity_description),
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
@@ -2501,6 +2610,7 @@ private fun PhotoDeck(
     canSwipePrevious: Boolean,
     canSwipeNext: Boolean,
     isSwipeDeleteEnabled: Boolean,
+    swipeGestureSensitivity: Float,
     swipeLeftAction: SwipeAction,
     swipeRightAction: SwipeAction,
     swipeUpAction: SwipeAction,
@@ -2571,6 +2681,7 @@ private fun PhotoDeck(
                             )
                             .zIndex(cardZIndex),
                         enabled = isTopCard && !isTopCardImageGestureLocked,
+                        gestureSensitivity = swipeGestureSensitivity,
                         canSwipeLeft = isTopCard && canSwipeForAction(
                             action = swipeLeftAction,
                             canSwipePrevious = canSwipePrevious,
@@ -2677,9 +2788,19 @@ private fun PhotoCardImage(
         offset: Offset,
         hasTwoFingerGestureActive: Boolean,
     ): Boolean {
+        val offsetDistance = offset.getDistanceValue()
+        val horizontalOffsetAbs = abs(offset.x)
+        val verticalOffsetAbs = abs(offset.y)
+
+        val scaleLocked = scale > MIN_PHOTO_GESTURE_SCALE + PHOTO_GESTURE_LOCK_SCALE_EPSILON
+        val horizontalStillAtEdge = horizontalOffsetAbs <= PHOTO_GESTURE_AXIS_UNLOCK_EPSILON
+        val verticalStillAtEdge = verticalOffsetAbs <= PHOTO_GESTURE_AXIS_UNLOCK_EPSILON
+
         return hasTwoFingerGestureActive ||
-            scale > MIN_PHOTO_GESTURE_SCALE + PHOTO_GESTURE_LOCK_SCALE_EPSILON ||
-            offset.getDistanceValue() > PHOTO_GESTURE_OFFSET_LOCK_EPSILON
+            scaleLocked ||
+            (offsetDistance > PHOTO_GESTURE_OFFSET_LOCK_EPSILON &&
+                !horizontalStillAtEdge &&
+                !verticalStillAtEdge)
     }
 
     fun cancelResetTransformAnimation() {
@@ -3001,6 +3122,7 @@ private const val MAX_PHOTO_GESTURE_SCALE = 4f
 private const val PHOTO_GESTURE_EPSILON = 0.0001f
 private const val PHOTO_GESTURE_LOCK_SCALE_EPSILON = 0.02f
 private const val PHOTO_GESTURE_OFFSET_LOCK_EPSILON = 0.5f
+private const val PHOTO_GESTURE_AXIS_UNLOCK_EPSILON = 0.8f
 private const val PHOTO_GESTURE_RESET_SNAP_EPSILON = 0.03f
 private val CARD_LAYER_INSET = 12.dp
 private val MAX_DECK_WIDTH = 460.dp
@@ -3031,6 +3153,8 @@ private fun MainScreenReadyPreview() {
             ),
             permissionMode = PermissionHelper.PermissionMode.GRANTED_PARTIAL,
             isSwipeDeleteEnabled = true,
+            isDeleteReminderEnabled = SettingsRepository.DEFAULT_DELETE_REMINDER_ENABLED,
+            swipeGestureSensitivity = SettingsRepository.DEFAULT_SWIPE_GESTURE_SENSITIVITY,
             showFullImage = false,
             showFloatingDeleteButton = true,
             isGestureBallEnabled = true,
@@ -3056,6 +3180,8 @@ private fun MainScreenReadyPreview() {
             onPermissionRationaleDismissed = {},
             onRefresh = {},
             onSwipeDeleteEnabledChange = {},
+            onDeleteReminderEnabledChange = {},
+            onSwipeGestureSensitivityChange = {},
             onShowFullImageChange = {},
             onShowFloatingDeleteButtonChange = {},
             onGestureBallEnabledChange = {},
@@ -3091,6 +3217,8 @@ private fun MainScreenPermissionPreview() {
             state = HomeUiState.PermissionDenied,
             permissionMode = PermissionHelper.PermissionMode.DENIED,
             isSwipeDeleteEnabled = false,
+            isDeleteReminderEnabled = SettingsRepository.DEFAULT_DELETE_REMINDER_ENABLED,
+            swipeGestureSensitivity = SettingsRepository.DEFAULT_SWIPE_GESTURE_SENSITIVITY,
             showFullImage = false,
             showFloatingDeleteButton = false,
             isGestureBallEnabled = false,
@@ -3116,6 +3244,8 @@ private fun MainScreenPermissionPreview() {
             onPermissionRationaleDismissed = {},
             onRefresh = {},
             onSwipeDeleteEnabledChange = {},
+            onDeleteReminderEnabledChange = {},
+            onSwipeGestureSensitivityChange = {},
             onShowFullImageChange = {},
             onShowFloatingDeleteButtonChange = {},
             onGestureBallEnabledChange = {},

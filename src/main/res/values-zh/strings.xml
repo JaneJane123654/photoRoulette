@@ -40,6 +40,10 @@
     <string name="swipe_delete_title">启用删除操作</string>
     <string name="swipe_delete_enabled_description">已启用。任何被配置为“删除”的滑动方向都会请求 Android 删除该照片。</string>
     <string name="swipe_delete_disabled_description">已禁用以提高浏览安全性。配置为“删除”的方向会自动退化为“下一张图片”。</string>
+    <string name="delete_reminder_title">删除提醒</string>
+    <string name="delete_reminder_enabled_description">已开启。删除图片后会显示一个短提示。</string>
+    <string name="delete_reminder_disabled_description">已关闭。删除后不显示提示。</string>
+    <string name="delete_reminder_toast">已删除图片</string>
     <string name="show_full_image_title">卡片完整展示图片</string>
     <string name="show_full_image_enabled_description">已开启。卡片会完整显示整张图片，可能出现留白。</string>
     <string name="show_full_image_disabled_description">默认关闭。卡片保持当前裁剪铺满样式。</string>
@@ -71,6 +75,8 @@
     <string name="silent_delete_scope_missing_description">尚未授权</string>
     <string name="swipe_behavior_title">滑动行为</string>
     <string name="swipe_behavior_description">为每个滑动方向选择对应操作。</string>
+    <string name="swipe_sensitivity_label">滑动灵敏度：%1$d%%</string>
+    <string name="swipe_sensitivity_description">灵敏度越高，所需滑动距离越短；灵敏度越低，误触概率越低、操作更稳。</string>
     <string name="swipe_direction_left">左滑</string>
     <string name="swipe_direction_right">右滑</string>
     <string name="swipe_direction_up">上滑</string>

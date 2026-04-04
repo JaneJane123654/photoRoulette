@@ -40,6 +40,10 @@
     <string name="swipe_delete_title">Enable delete action</string>
     <string name="swipe_delete_enabled_description">Enabled. Any direction mapped to Delete will ask Android to remove that photo.</string>
     <string name="swipe_delete_disabled_description">Disabled for safer browsing. Delete actions will fall back to next photo.</string>
+    <string name="delete_reminder_title">Delete reminder</string>
+    <string name="delete_reminder_enabled_description">Enabled. Show a short reminder after a photo is deleted.</string>
+    <string name="delete_reminder_disabled_description">Disabled. No reminder is shown after deletion.</string>
+    <string name="delete_reminder_toast">Photo deleted</string>
     <string name="show_full_image_title">Show full image in card</string>
     <string name="show_full_image_enabled_description">Enabled. Cards keep the entire photo visible with blank margins if needed.</string>
     <string name="show_full_image_disabled_description">Disabled (default). Cards use crop-fill for a fuller edge-to-edge look.</string>
@@ -71,6 +75,8 @@
     <string name="silent_delete_scope_missing_description">Not authorized yet</string>
     <string name="swipe_behavior_title">Swipe behavior</string>
     <string name="swipe_behavior_description">Choose the action for each swipe direction.</string>
+    <string name="swipe_sensitivity_label">Swipe sensitivity: %1$d%%</string>
+    <string name="swipe_sensitivity_description">Higher sensitivity starts and dismisses swipes with shorter finger movement. Lower sensitivity is more stable and less likely to trigger by mistake.</string>
     <string name="swipe_direction_left">Swipe left</string>
     <string name="swipe_direction_right">Swipe right</string>
     <string name="swipe_direction_up">Swipe up</string>

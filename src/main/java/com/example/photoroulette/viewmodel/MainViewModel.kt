@@ -53,6 +53,10 @@ class MainViewModel(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : AndroidViewModel(application) {
 
+    data class DeleteReminderEvent(
+        val deletedImageId: Long,
+    )
+
     constructor(
         application: Application,
         savedStateHandle: SavedStateHandle,
@@ -94,6 +98,22 @@ class MainViewModel(
         savedStateHandle[KEY_IS_SWIPE_DELETE_ENABLED] ?: true,
     )
     val isSwipeDeleteEnabled: StateFlow<Boolean> = _isSwipeDeleteEnabled.asStateFlow()
+
+    private val _isDeleteReminderEnabled = MutableStateFlow(
+        savedStateHandle[KEY_IS_DELETE_REMINDER_ENABLED]
+            ?: SettingsRepository.DEFAULT_DELETE_REMINDER_ENABLED,
+    )
+    val isDeleteReminderEnabled: StateFlow<Boolean> = _isDeleteReminderEnabled.asStateFlow()
+
+    private val _swipeGestureSensitivity = MutableStateFlow(
+        (savedStateHandle[KEY_SWIPE_GESTURE_SENSITIVITY]
+            ?: SettingsRepository.DEFAULT_SWIPE_GESTURE_SENSITIVITY)
+            .coerceIn(
+                SettingsRepository.MIN_SWIPE_GESTURE_SENSITIVITY,
+                SettingsRepository.MAX_SWIPE_GESTURE_SENSITIVITY,
+            ),
+    )
+    val swipeGestureSensitivity: StateFlow<Float> = _swipeGestureSensitivity.asStateFlow()
 
     private val _showFullImage = MutableStateFlow(
         savedStateHandle[KEY_SHOW_FULL_IMAGE] ?: false,
@@ -208,11 +228,28 @@ class MainViewModel(
     private val _deleteRequests = MutableSharedFlow<IntentSenderRequest>(extraBufferCapacity = 1)
     val deleteRequests: SharedFlow<IntentSenderRequest> = _deleteRequests.asSharedFlow()
 
+    private val _deleteReminderEvents = MutableSharedFlow<DeleteReminderEvent>(extraBufferCapacity = 1)
+    val deleteReminderEvents: SharedFlow<DeleteReminderEvent> = _deleteReminderEvents.asSharedFlow()
+
     init {
         scope.launch {
             settingsRepository.isSwipeDeleteEnabled.collect { enabled ->
                 _isSwipeDeleteEnabled.value = enabled
                 savedStateHandle[KEY_IS_SWIPE_DELETE_ENABLED] = enabled
+            }
+        }
+
+        scope.launch {
+            settingsRepository.isDeleteReminderEnabled.collect { enabled ->
+                _isDeleteReminderEnabled.value = enabled
+                savedStateHandle[KEY_IS_DELETE_REMINDER_ENABLED] = enabled
+            }
+        }
+
+        scope.launch {
+            settingsRepository.swipeGestureSensitivity.collect { sensitivity ->
+                _swipeGestureSensitivity.value = sensitivity
+                savedStateHandle[KEY_SWIPE_GESTURE_SENSITIVITY] = sensitivity
             }
         }
 
@@ -518,11 +555,27 @@ class MainViewModel(
         pendingDeleteId = null
         emitQueueState()
         preloadUpcomingImages()
+
+        if (_isDeleteReminderEnabled.value) {
+            _deleteReminderEvents.tryEmit(DeleteReminderEvent(deletedImageId = deletedId))
+        }
     }
 
     fun setSwipeDeleteEnabled(enabled: Boolean) {
         scope.launch(ioDispatcher) {
             settingsRepository.setSwipeDeleteEnabled(enabled)
+        }
+    }
+
+    fun setDeleteReminderEnabled(enabled: Boolean) {
+        scope.launch(ioDispatcher) {
+            settingsRepository.setDeleteReminderEnabled(enabled)
+        }
+    }
+
+    fun setSwipeGestureSensitivity(sensitivity: Float) {
+        scope.launch(ioDispatcher) {
+            settingsRepository.setSwipeGestureSensitivity(sensitivity)
         }
     }
 
@@ -1093,6 +1146,8 @@ class MainViewModel(
         const val KEY_PENDING_DELETE_ID = "pending_delete_id"
         const val KEY_PERMISSION_MODE = "permission_mode"
         const val KEY_IS_SWIPE_DELETE_ENABLED = "is_swipe_delete_enabled"
+        const val KEY_IS_DELETE_REMINDER_ENABLED = "is_delete_reminder_enabled"
+        const val KEY_SWIPE_GESTURE_SENSITIVITY = "swipe_gesture_sensitivity"
         const val KEY_SHOW_FULL_IMAGE = "show_full_image"
         const val KEY_SHOW_FLOATING_DELETE_BUTTON = "show_floating_delete_button"
         const val KEY_IS_GESTURE_BALL_ENABLED = "is_gesture_ball_enabled"

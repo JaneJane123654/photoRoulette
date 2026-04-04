@@ -27,12 +27,14 @@ class SettingsRepository(
 
     private object Keys {
         val EnableSwipeDelete = booleanPreferencesKey("enable_swipe_delete")
+        val EnableDeleteReminder = booleanPreferencesKey("enable_delete_reminder")
         val EnableSilentDelete = booleanPreferencesKey("enable_silent_delete")
         val ShowFullImage = booleanPreferencesKey("show_full_image")
         val ShowFloatingDeleteButton = booleanPreferencesKey("show_floating_delete_button")
         val EnableGestureBall = booleanPreferencesKey("enable_gesture_ball")
         val EnableGestureBallFeedback = booleanPreferencesKey("enable_gesture_ball_feedback")
         val ShowGestureBallActionHint = booleanPreferencesKey("show_gesture_ball_action_hint")
+        val SwipeGestureSensitivity = floatPreferencesKey("swipe_gesture_sensitivity")
         val GestureBallSizeScale = floatPreferencesKey("gesture_ball_size_scale")
         val SilentDeleteTreeUris = stringSetPreferencesKey("silent_delete_tree_uris")
         val SilentDeleteTreeUri = stringPreferencesKey("silent_delete_tree_uri")
@@ -57,6 +59,32 @@ class SettingsRepository(
         }
         .map { preferences ->
             preferences[Keys.EnableSwipeDelete] ?: true
+        }
+
+    val isDeleteReminderEnabled: Flow<Boolean> = appContext.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[Keys.EnableDeleteReminder] ?: DEFAULT_DELETE_REMINDER_ENABLED
+        }
+
+    val swipeGestureSensitivity: Flow<Float> = appContext.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[Keys.SwipeGestureSensitivity]
+                ?.coerceIn(MIN_SWIPE_GESTURE_SENSITIVITY, MAX_SWIPE_GESTURE_SENSITIVITY)
+                ?: DEFAULT_SWIPE_GESTURE_SENSITIVITY
         }
 
     val showFullImage: Flow<Boolean> = appContext.dataStore.data
@@ -261,6 +289,22 @@ class SettingsRepository(
         }
     }
 
+    suspend fun setDeleteReminderEnabled(enabled: Boolean) {
+        appContext.dataStore.edit { preferences ->
+            preferences[Keys.EnableDeleteReminder] = enabled
+        }
+    }
+
+    suspend fun setSwipeGestureSensitivity(sensitivity: Float) {
+        val normalizedSensitivity = sensitivity.coerceIn(
+            MIN_SWIPE_GESTURE_SENSITIVITY,
+            MAX_SWIPE_GESTURE_SENSITIVITY,
+        )
+        appContext.dataStore.edit { preferences ->
+            preferences[Keys.SwipeGestureSensitivity] = normalizedSensitivity
+        }
+    }
+
     suspend fun setShowFullImage(enabled: Boolean) {
         appContext.dataStore.edit { preferences ->
             preferences[Keys.ShowFullImage] = enabled
@@ -438,6 +482,10 @@ class SettingsRepository(
         const val DEFAULT_GESTURE_BALL_SIZE_SCALE = 1f
         const val DEFAULT_GESTURE_BALL_FEEDBACK_ENABLED = true
         const val DEFAULT_GESTURE_BALL_ACTION_HINT_ENABLED = true
+        const val MIN_SWIPE_GESTURE_SENSITIVITY = 0.8f
+        const val MAX_SWIPE_GESTURE_SENSITIVITY = 1.35f
+        const val DEFAULT_SWIPE_GESTURE_SENSITIVITY = 1f
+        const val DEFAULT_DELETE_REMINDER_ENABLED = true
 
         val DEFAULT_LEFT_ACTION = SwipeAction.Delete
         val DEFAULT_RIGHT_ACTION = SwipeAction.Next
