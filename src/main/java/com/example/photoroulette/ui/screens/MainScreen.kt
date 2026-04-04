@@ -414,6 +414,7 @@ private fun MainScreenContent(
 
                         HomeUiState.Empty -> EmptyGalleryScreen()
                         is HomeUiState.Ready -> PhotoDeck(
+                            previousCard = effectiveState.previousCard,
                             visibleCards = effectiveState.visibleCards,
                             canSwipePrevious = effectiveState.canSwipeToPrevious,
                             canSwipeNext = effectiveState.canSwipeToNext,
@@ -2699,6 +2700,7 @@ private fun LanguageSettingsControls(
 
 @Composable
 private fun PhotoDeck(
+    previousCard: MediaCard?,
     visibleCards: List<MediaCard>,
     canSwipePrevious: Boolean,
     canSwipeNext: Boolean,
@@ -2714,11 +2716,14 @@ private fun PhotoDeck(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val density = LocalDensity.current
     val playerPool = remember(context) { DeckPlayerPool(context) }
     var topCardDragProgress by remember { mutableFloatStateOf(0f) }
+    var topCardDownCoverProgress by remember { mutableFloatStateOf(0f) }
     var isTopCardForceFullImage by remember { mutableStateOf(false) }
     var isTopCardImageGestureLocked by remember { mutableStateOf(false) }
     val topCard = visibleCards.firstOrNull()
+    val shouldUsePreviousCardTopCover = swipeDownAction == SwipeAction.Previous && previousCard != null
     val nextVideoUri = remember(visibleCards) {
         visibleCards
             .drop(1)
@@ -2734,6 +2739,7 @@ private fun PhotoDeck(
 
     LaunchedEffect(visibleCards.firstOrNull()?.id) {
         topCardDragProgress = 0f
+        topCardDownCoverProgress = 0f
         isTopCardForceFullImage = false
         isTopCardImageGestureLocked = false
     }
@@ -2763,6 +2769,9 @@ private fun PhotoDeck(
     ) {
         val deckWidth = minOf(maxWidth, maxHeight * CARD_ASPECT_RATIO).coerceAtMost(MAX_DECK_WIDTH)
         val deckHeight = deckWidth / CARD_ASPECT_RATIO
+        val deckHeightPx = with(density) { deckHeight.toPx() }
+        val clampedTopCardDownCoverProgress = topCardDownCoverProgress.coerceIn(0f, 1f)
+        val previousCoverTranslationY = -deckHeightPx * (1f - clampedTopCardDownCoverProgress)
 
         Box(
             modifier = Modifier.size(
@@ -2797,6 +2806,18 @@ private fun PhotoDeck(
                             .padding(
                                 horizontal = horizontalInset,
                                 vertical = verticalInset,
+                            )
+                            .then(
+                                if (isTopCard && clampedTopCardDownCoverProgress > 0f) {
+                                    Modifier.graphicsLayer {
+                                        val scale =
+                                            1f - (clampedTopCardDownCoverProgress * TOP_CARD_DOWN_PULL_SCALE_REDUCTION)
+                                        scaleX = scale
+                                        scaleY = scale
+                                    }
+                                } else {
+                                    Modifier
+                                },
                             )
                             .zIndex(cardZIndex),
                         enabled = isTopCard && !isTopCardImageGestureLocked,
@@ -2840,6 +2861,15 @@ private fun PhotoDeck(
                         } else {
                             {}
                         },
+                        isDownSwipeCoverEnabled =
+                            isTopCard &&
+                                shouldUsePreviousCardTopCover &&
+                                canSwipePrevious,
+                        onDownSwipeCoverProgressChanged = if (isTopCard) {
+                            { topCardDownCoverProgress = it }
+                        } else {
+                            {}
+                        },
                         shape = RoundedCornerShape(28.dp),
                     ) {
                         MediaCardContent(
@@ -2859,6 +2889,34 @@ private fun PhotoDeck(
                             } else {
                                 {}
                             },
+                        )
+                    }
+                }
+            }
+
+            if (shouldUsePreviousCardTopCover) {
+                val coverCard = previousCard
+                key("cover-${coverCard.id}") {
+                    SwipeableCard(
+                        onSwiped = { false },
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                translationY = previousCoverTranslationY
+                            }
+                            .zIndex((visibleCards.size + 2).toFloat()),
+                        enabled = false,
+                        shape = RoundedCornerShape(28.dp),
+                    ) {
+                        MediaCardContent(
+                            card = coverCard,
+                            isTopCard = false,
+                            playerPool = playerPool,
+                            showFullImage = showFullImage,
+                            enableTwoFingerTransform = false,
+                            enableTapToggle = false,
+                            onGestureLockChanged = {},
+                            onTapWhenIdle = {},
                         )
                     }
                 }
@@ -3547,6 +3605,7 @@ private fun canSwipeForAction(
 
 private const val CARD_ASPECT_RATIO = 0.72f
 private const val BACK_CARD_REVEAL_MULTIPLIER = 0.72f
+private const val TOP_CARD_DOWN_PULL_SCALE_REDUCTION = 0.05f
 private val CARD_LAYER_INSET = 12.dp
 private val MAX_DECK_WIDTH = 460.dp
 private val FLOATING_DELETE_BUTTON_SIZE = 54.dp
@@ -3572,6 +3631,12 @@ private fun MainScreenReadyPreview() {
         val previewSnackbarHostState = remember { SnackbarHostState() }
         MainScreenContent(
             state = HomeUiState.Ready(
+                previousCard = MediaCard(
+                    id = 10L,
+                    mimeType = "image/jpeg",
+                    kind = MediaKind.Image,
+                    previewUri = Uri.EMPTY,
+                ),
                 visibleCards = listOf(
                     MediaCard(
                         id = 11L,

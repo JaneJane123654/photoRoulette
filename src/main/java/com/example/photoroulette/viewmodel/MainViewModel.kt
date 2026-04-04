@@ -1068,6 +1068,9 @@ class MainViewModel(
             HomeUiState.Empty
         } else {
             HomeUiState.Ready(
+                previousCard = queueIds
+                    .getOrNull(currentIndex - 1)
+                    ?.let { id -> mediaCardCache[id] },
                 visibleCards = visibleCards,
                 canSwipeToPrevious = canSwipeToPrevious(),
                 canSwipeToNext = canSwipeToNext(),
@@ -1318,6 +1321,9 @@ class MainViewModel(
     private fun createInitialUiState(): HomeUiState = when {
         queueIds.isNotEmpty() && currentIndex < queueIds.size && hasCachedCardsForVisibleWindow() -> {
             HomeUiState.Ready(
+                previousCard = queueIds
+                    .getOrNull(currentIndex - 1)
+                    ?.let { id -> mediaCardCache[id] },
                 visibleCards = queueIds
                     .drop(currentIndex)
                     .take(HomeUiState.MAX_VISIBLE_CARD_COUNT)

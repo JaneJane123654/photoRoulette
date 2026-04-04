@@ -74,6 +74,8 @@ fun SwipeableCard(
     restingScale: Float = 1f,
     revealProgress: Float = 0f,
     onDragProgressChanged: (Float) -> Unit = {},
+    isDownSwipeCoverEnabled: Boolean = false,
+    onDownSwipeCoverProgressChanged: (Float) -> Unit = {},
     shape: Shape = RoundedCornerShape(28.dp),
     content: @Composable BoxScope.() -> Unit,
 ) {
@@ -90,9 +92,11 @@ fun SwipeableCard(
     val currentCanSwipeRight by rememberUpdatedState(canSwipeRight)
     val currentCanSwipeUp by rememberUpdatedState(canSwipeUp)
     val currentCanSwipeDown by rememberUpdatedState(canSwipeDown)
+    val currentIsDownSwipeCoverEnabled by rememberUpdatedState(isDownSwipeCoverEnabled)
     val currentGestureSensitivity by rememberUpdatedState(
         gestureSensitivity.coerceIn(MIN_GESTURE_SENSITIVITY, MAX_GESTURE_SENSITIVITY),
     )
+    val currentOnDownSwipeCoverProgressChanged by rememberUpdatedState(onDownSwipeCoverProgressChanged)
 
     var cardSize by remember { mutableStateOf(IntSize.Zero) }
     var offsetX by remember { mutableFloatStateOf(0f) }
@@ -100,6 +104,8 @@ fun SwipeableCard(
     var isSettling by remember { mutableStateOf(false) }
     var settleJob by remember { mutableStateOf<Job?>(null) }
     var lastReportedProgress by remember { mutableFloatStateOf(0f) }
+    var downSwipeCoverOffsetY by remember { mutableFloatStateOf(0f) }
+    var lastReportedDownSwipeCoverProgress by remember { mutableFloatStateOf(0f) }
     var gestureExclusionRects by remember { mutableStateOf<List<Rect>>(emptyList()) }
 
     fun reportDragProgress(progress: Float, force: Boolean = false) {
@@ -109,16 +115,29 @@ fun SwipeableCard(
         }
     }
 
+    fun reportDownSwipeCoverProgress(progress: Float, force: Boolean = false) {
+        if (force || abs(progress - lastReportedDownSwipeCoverProgress) >= DRAG_PROGRESS_EPSILON) {
+            lastReportedDownSwipeCoverProgress = progress
+            currentOnDownSwipeCoverProgressChanged(progress)
+        }
+    }
+
     if (enabled) {
         DisposableEffect(currentOnDragProgressChanged) {
             onDispose {
                 reportDragProgress(0f, force = true)
             }
         }
+
+        DisposableEffect(currentOnDownSwipeCoverProgressChanged) {
+            onDispose {
+                reportDownSwipeCoverProgress(0f, force = true)
+            }
+        }
     }
 
-    LaunchedEffect(enabled) {
-        if (!enabled) {
+    LaunchedEffect(enabled, isDownSwipeCoverEnabled) {
+        if (!enabled || !isDownSwipeCoverEnabled) {
             settleJob?.cancel()
             settleJob = null
             isSettling = false
@@ -126,7 +145,11 @@ fun SwipeableCard(
                 offsetX = 0f
                 offsetY = 0f
             }
+            if (downSwipeCoverOffsetY != 0f) {
+                downSwipeCoverOffsetY = 0f
+            }
             reportDragProgress(0f, force = true)
+            reportDownSwipeCoverProgress(0f, force = true)
         }
     }
 
@@ -194,6 +217,7 @@ fun SwipeableCard(
                         canSwipeRight,
                         canSwipeUp,
                         canSwipeDown,
+                        isDownSwipeCoverEnabled,
                     ) {
                         awaitEachGesture {
                             val down = awaitFirstDown(requireUnconsumed = false)
@@ -237,6 +261,43 @@ fun SwipeableCard(
                                     null -> rawDelta
                                 }
 
+                                val canDriveDownSwipeCover =
+                                    currentIsDownSwipeCoverEnabled && currentCanSwipeDown
+                                val shouldStartDownSwipeCover =
+                                    normalizedDelta.y > 0f && abs(normalizedDelta.y) >= abs(normalizedDelta.x)
+                                val maxCoverOffset =
+                                    cardSize.height.toFloat().coerceAtLeast(1f) *
+                                        DOWN_SWIPE_COVER_MAX_PULL_MULTIPLIER
+
+                                if (
+                                    canDriveDownSwipeCover &&
+                                    (downSwipeCoverOffsetY > 0f || shouldStartDownSwipeCover)
+                                ) {
+                                    downSwipeCoverOffsetY =
+                                        (downSwipeCoverOffsetY + normalizedDelta.y)
+                                            .coerceIn(0f, maxCoverOffset)
+                                    hasDraggedCard = true
+
+                                    if (offsetX != 0f || offsetY != 0f) {
+                                        offsetX = 0f
+                                        offsetY = 0f
+                                        reportDragProgress(0f, force = true)
+                                    }
+
+                                    reportDownSwipeCoverProgress(
+                                        progress = calculateDownSwipeCoverProgress(
+                                            downSwipeCoverOffsetY = downSwipeCoverOffsetY,
+                                            cardSize = cardSize,
+                                        ),
+                                    )
+                                    return
+                                }
+
+                                if (downSwipeCoverOffsetY != 0f) {
+                                    downSwipeCoverOffsetY = 0f
+                                    reportDownSwipeCoverProgress(0f, force = true)
+                                }
+
                                 val dampedDeltaX = when {
                                     normalizedDelta.x < 0f && !currentCanSwipeLeft -> {
                                         normalizedDelta.x * BLOCKED_DIRECTION_DRAG_FRICTION
@@ -273,6 +334,8 @@ fun SwipeableCard(
                                         gestureSensitivity = currentGestureSensitivity,
                                     ),
                                 )
+
+                                reportDownSwipeCoverProgress(0f)
                             }
 
                             while (true) {
@@ -337,6 +400,70 @@ fun SwipeableCard(
 
                             settleJob = scope.launch {
                                 isSettling = true
+
+                                val downSwipeCoverThreshold = cardSize.height.toFloat()
+                                    .coerceAtLeast(1f) * DOWN_SWIPE_COVER_CONFIRM_FRACTION
+
+                                if (
+                                    currentIsDownSwipeCoverEnabled &&
+                                        currentCanSwipeDown &&
+                                        downSwipeCoverOffsetY > 0f
+                                ) {
+                                    val shouldConfirmDownSwipeCover =
+                                        downSwipeCoverOffsetY >= downSwipeCoverThreshold
+
+                                    if (shouldConfirmDownSwipeCover) {
+                                        animateValueTo(
+                                            startValue = downSwipeCoverOffsetY,
+                                            targetValue = cardSize.height.toFloat().coerceAtLeast(1f),
+                                            forDismiss = true,
+                                        ) { value ->
+                                            downSwipeCoverOffsetY = value
+                                            reportDownSwipeCoverProgress(
+                                                progress = calculateDownSwipeCoverProgress(
+                                                    downSwipeCoverOffsetY = value,
+                                                    cardSize = cardSize,
+                                                ),
+                                            )
+                                        }
+
+                                        val handled = currentOnSwiped(SwipeDirection.Down)
+                                        if (!handled) {
+                                            animateValueTo(
+                                                startValue = downSwipeCoverOffsetY,
+                                                targetValue = 0f,
+                                            ) { value ->
+                                                downSwipeCoverOffsetY = value
+                                                reportDownSwipeCoverProgress(
+                                                    progress = calculateDownSwipeCoverProgress(
+                                                        downSwipeCoverOffsetY = value,
+                                                        cardSize = cardSize,
+                                                    ),
+                                                )
+                                            }
+                                        } else {
+                                            downSwipeCoverOffsetY = 0f
+                                            reportDownSwipeCoverProgress(0f, force = true)
+                                        }
+                                    } else {
+                                        animateValueTo(
+                                            startValue = downSwipeCoverOffsetY,
+                                            targetValue = 0f,
+                                        ) { value ->
+                                            downSwipeCoverOffsetY = value
+                                            reportDownSwipeCoverProgress(
+                                                progress = calculateDownSwipeCoverProgress(
+                                                    downSwipeCoverOffsetY = value,
+                                                    cardSize = cardSize,
+                                                ),
+                                            )
+                                        }
+                                    }
+
+                                    isSettling = false
+                                    settleJob = null
+                                    return@launch
+                                }
 
                                 if (cancelledByMultiTouch) {
                                     animateCardTo(
@@ -564,6 +691,40 @@ private suspend fun animateCardTo(
     }
 }
 
+private suspend fun animateValueTo(
+    startValue: Float,
+    targetValue: Float,
+    forDismiss: Boolean = false,
+    onFrame: (Float) -> Unit,
+) {
+    val anim = Animatable(initialValue = startValue)
+    anim.animateTo(
+        targetValue = targetValue,
+        animationSpec = spring(
+            dampingRatio = if (forDismiss) {
+                Spring.DampingRatioNoBouncy
+            } else {
+                Spring.DampingRatioMediumBouncy
+            },
+            stiffness = if (forDismiss) {
+                Spring.StiffnessHigh
+            } else {
+                Spring.StiffnessMedium
+            },
+        ),
+    ) {
+        onFrame(value)
+    }
+}
+
+private fun calculateDownSwipeCoverProgress(
+    downSwipeCoverOffsetY: Float,
+    cardSize: IntSize,
+): Float {
+    val height = cardSize.height.toFloat().coerceAtLeast(1f)
+    return (downSwipeCoverOffsetY / height).coerceIn(0f, 1f)
+}
+
 private fun calculateDragProgress(
     offsetX: Float,
     offsetY: Float,
@@ -600,6 +761,8 @@ private const val MIN_TOUCH_SLOP = 6f
 private const val TOUCH_SLOP_SENSITIVITY_FACTOR = 1.28f
 private const val AXIS_LOCK_DOMINANCE_RATIO = 1.28f
 private const val AXIS_LOCK_CROSS_DAMPING = 0.28f
+private const val DOWN_SWIPE_COVER_MAX_PULL_MULTIPLIER = 1.18f
+private const val DOWN_SWIPE_COVER_CONFIRM_FRACTION = 0.33f
 private const val MIN_THRESHOLD_SCALE = 0.8f
 private const val MAX_THRESHOLD_SCALE = 1.25f
 

@@ -11,6 +11,7 @@ sealed interface HomeUiState {
     data object Empty : HomeUiState
 
     data class Ready(
+        val previousCard: MediaCard?,
         val visibleCards: List<MediaCard>,
         val canSwipeToPrevious: Boolean,
         val canSwipeToNext: Boolean,
