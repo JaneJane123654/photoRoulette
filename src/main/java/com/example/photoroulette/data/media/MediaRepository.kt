@@ -276,10 +276,16 @@ class MediaRepository(
             MediaStore.MediaColumns.DISPLAY_NAME,
         )
         const val SELECTION =
-            "${MediaStore.Files.FileColumns.MEDIA_TYPE}=? OR ${MediaStore.Files.FileColumns.MEDIA_TYPE}=?"
+            "(${MediaStore.Files.FileColumns.MEDIA_TYPE}=? OR " +
+                "${MediaStore.Files.FileColumns.MEDIA_TYPE}=?) AND " +
+                "${MediaStore.MediaColumns.SIZE}>0 AND " +
+                "(${MediaStore.MediaColumns.MIME_TYPE} LIKE 'image/%' OR " +
+                "${MediaStore.MediaColumns.MIME_TYPE} LIKE 'video/%') AND " +
+                "${MediaStore.MediaColumns.MIME_TYPE}!=?"
         val SELECTION_ARGS = arrayOf(
             MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString(),
             MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString(),
+            DEFAULT_MIME_TYPE,
         )
         val SILENT_DELETE_PROJECTION = arrayOf(
             MediaStore.MediaColumns.DISPLAY_NAME,

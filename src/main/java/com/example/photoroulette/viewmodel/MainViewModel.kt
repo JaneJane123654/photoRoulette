@@ -1015,8 +1015,8 @@ class MainViewModel(
     fun startUpdateInstallation() {
         val release = _availableUpdateRelease.value ?: return
         scope.launch(ioDispatcher) {
+            _isUpdateInstallInProgress.value = true
             try {
-                _isUpdateInstallInProgress.value = true
                 val downloadedApk = appUpdateRepository.downloadReleaseApk(release)
                 pendingUpdatePackagePath = downloadedApk.absolutePath
                 val context = getApplication<Application>()
@@ -1030,17 +1030,18 @@ class MainViewModel(
             } catch (_: Throwable) {
                 clearPendingDownloadedUpdatePackage()
                 _updateCheckFeedback.value = UpdateCheckFeedback.Failed()
-            } finally {
                 _isUpdateInstallInProgress.value = false
             }
         }
     }
 
     fun onUpdateInstallFlowFinished() {
-        clearPendingDownloadedUpdatePackage()
+        _isUpdateInstallInProgress.value = false
+        pendingUpdatePackagePath = null
     }
 
     fun onUpdateInstallLaunchFailed() {
+        _isUpdateInstallInProgress.value = false
         clearPendingDownloadedUpdatePackage()
         _updateCheckFeedback.value = UpdateCheckFeedback.Failed()
     }

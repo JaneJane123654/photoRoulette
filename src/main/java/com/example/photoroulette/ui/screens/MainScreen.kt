@@ -107,6 +107,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
@@ -2722,10 +2723,12 @@ private fun PhotoDeck(
     val playerPool = remember(context) { DeckPlayerPool(context) }
     var topCardDragProgress by remember { mutableFloatStateOf(0f) }
     var topCardDownCoverProgress by remember { mutableFloatStateOf(0f) }
+    var topCardRightCoverProgress by remember { mutableFloatStateOf(0f) }
     var isTopCardForceFullImage by remember { mutableStateOf(false) }
     var isTopCardImageGestureLocked by remember { mutableStateOf(false) }
     val topCard = visibleCards.firstOrNull()
     val shouldUsePreviousCardTopCover = swipeDownAction == SwipeAction.Previous && previousCard != null
+    val shouldUsePreviousCardRightCover = swipeRightAction == SwipeAction.Previous && previousCard != null
     val nextVideoUri = remember(visibleCards) {
         visibleCards
             .drop(1)
@@ -2742,6 +2745,7 @@ private fun PhotoDeck(
     LaunchedEffect(visibleCards.firstOrNull()?.id) {
         topCardDragProgress = 0f
         topCardDownCoverProgress = 0f
+        topCardRightCoverProgress = 0f
         isTopCardForceFullImage = false
         isTopCardImageGestureLocked = false
     }
@@ -2771,9 +2775,12 @@ private fun PhotoDeck(
     ) {
         val deckWidth = minOf(maxWidth, maxHeight * CARD_ASPECT_RATIO).coerceAtMost(MAX_DECK_WIDTH)
         val deckHeight = deckWidth / CARD_ASPECT_RATIO
+        val deckWidthPx = with(density) { deckWidth.toPx() }
         val deckHeightPx = with(density) { deckHeight.toPx() }
         val clampedTopCardDownCoverProgress = topCardDownCoverProgress.coerceIn(0f, 1f)
+        val clampedTopCardRightCoverProgress = topCardRightCoverProgress.coerceIn(0f, 1f)
         val previousCoverTranslationY = -deckHeightPx * (1f - clampedTopCardDownCoverProgress)
+        val previousCoverTranslationX = -deckWidthPx * (1f - clampedTopCardRightCoverProgress)
 
         Box(
             modifier = Modifier.size(
@@ -2860,6 +2867,15 @@ private fun PhotoDeck(
                         } else {
                             {}
                         },
+                        isRightSwipeCoverEnabled =
+                            isTopCard &&
+                                shouldUsePreviousCardRightCover &&
+                                canSwipePrevious,
+                        onRightSwipeCoverProgressChanged = if (isTopCard) {
+                            { topCardRightCoverProgress = it }
+                        } else {
+                            {}
+                        },
                         shape = RoundedCornerShape(28.dp),
                     ) {
                         MediaCardContent(
@@ -2884,10 +2900,14 @@ private fun PhotoDeck(
                 }
             }
 
-            if (
+            val shouldShowDownSwipeCover =
                 shouldUsePreviousCardTopCover &&
                     clampedTopCardDownCoverProgress > DOWN_SWIPE_COVER_VISIBILITY_EPSILON
-            ) {
+            val shouldShowRightSwipeCover =
+                shouldUsePreviousCardRightCover &&
+                    clampedTopCardRightCoverProgress > RIGHT_SWIPE_COVER_VISIBILITY_EPSILON
+
+            if (shouldShowDownSwipeCover || shouldShowRightSwipeCover) {
                 val coverCard = previousCard
                 key("cover-${coverCard.id}") {
                     SwipeableCard(
@@ -2895,7 +2915,16 @@ private fun PhotoDeck(
                         modifier = Modifier
                             .fillMaxSize()
                             .graphicsLayer {
-                                translationY = previousCoverTranslationY
+                                translationX = if (shouldShowRightSwipeCover) {
+                                    previousCoverTranslationX
+                                } else {
+                                    0f
+                                }
+                                translationY = if (shouldShowDownSwipeCover) {
+                                    previousCoverTranslationY
+                                } else {
+                                    0f
+                                }
                             }
                             .zIndex((visibleCards.size + 2).toFloat()),
                         enabled = false,
@@ -3413,11 +3442,6 @@ private fun VideoCardContent(
         if (!isTopCard || playbackUri == null || !playerPool.isActiveUri(playbackUri)) {
             return@LaunchedEffect
         }
-
-        if (!isLivePhoto && activePlayer.playbackState == Player.STATE_READY) {
-            isCoverVisible = false
-            visualState = PhotoVisualState.Ready
-        }
     }
 
     DisposableEffect(activePlayer, playbackUri, shouldAttachPlayer) {
@@ -3437,6 +3461,16 @@ private fun VideoCardContent(
                     visualState = PhotoVisualState.Ready
                 }
 
+                override fun onPlayerError(error: PlaybackException) {
+                    if (!playerPool.isActiveUri(targetUri)) {
+                        return
+                    }
+
+                    isCoverVisible = true
+                    isLiveMotionActive = false
+                    visualState = PhotoVisualState.Error
+                }
+
                 override fun onPlaybackStateChanged(playbackState: Int) {
                     if (!playerPool.isActiveUri(targetUri)) {
                         return
@@ -3446,13 +3480,6 @@ private fun VideoCardContent(
                         Player.STATE_BUFFERING -> {
                             if (visualState != PhotoVisualState.Error) {
                                 visualState = PhotoVisualState.Loading
-                            }
-                        }
-
-                        Player.STATE_READY -> {
-                            if (!currentIsLivePhoto && activePlayer.playWhenReady) {
-                                isCoverVisible = false
-                                visualState = PhotoVisualState.Ready
                             }
                         }
 
@@ -3791,6 +3818,7 @@ private fun canSwipeForAction(
 private const val CARD_ASPECT_RATIO = 0.72f
 private const val BACK_CARD_REVEAL_MULTIPLIER = 0.72f
 private const val DOWN_SWIPE_COVER_VISIBILITY_EPSILON = 0.001f
+private const val RIGHT_SWIPE_COVER_VISIBILITY_EPSILON = 0.001f
 private const val MIN_PHOTO_GESTURE_SCALE = 1f
 private const val MAX_PHOTO_GESTURE_SCALE = 4f
 private const val PHOTO_GESTURE_EPSILON = 0.0001f

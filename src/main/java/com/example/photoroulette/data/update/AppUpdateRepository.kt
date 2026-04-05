@@ -17,7 +17,8 @@ class AppUpdateRepository(
     private val repoName: String = DEFAULT_REPO_NAME,
 ) {
     private val appContext = context.applicationContext
-    private val updateCacheDir = File(appContext.cacheDir, UPDATE_CACHE_DIRECTORY)
+    private val updateStorageDir = File(appContext.filesDir, UPDATE_STORAGE_DIRECTORY)
+    private val legacyUpdateCacheDir = File(appContext.cacheDir, UPDATE_STORAGE_DIRECTORY)
 
     suspend fun fetchLatestRelease(): AppReleaseInfo? = withContext(Dispatchers.IO) {
         val apiUrl = URL("https://api.github.com/repos/$repoOwner/$repoName/releases/latest")
@@ -57,11 +58,11 @@ class AppUpdateRepository(
         val apkDownloadUrl = release.apkDownloadUrl
             ?: throw IOException("No APK asset available for release ${release.tagName}.")
 
-        ensureUpdateCacheDirectory()
+        ensureUpdateStorageDirectory()
         cleanupDownloadedApkPackages()
 
-        val targetFile = File(updateCacheDir, "update-${release.normalizedVersion}.apk")
-        val tempFile = File(updateCacheDir, "update-${release.normalizedVersion}.download")
+        val targetFile = File(updateStorageDir, "update-${release.normalizedVersion}.apk")
+        val tempFile = File(updateStorageDir, "update-${release.normalizedVersion}.download")
 
         if (tempFile.exists()) {
             tempFile.delete()
@@ -106,24 +107,27 @@ class AppUpdateRepository(
     }
 
     fun cleanupDownloadedApkPackages() {
-        if (!updateCacheDir.exists() || !updateCacheDir.isDirectory) {
-            return
-        }
+        listOf(updateStorageDir, legacyUpdateCacheDir)
+            .forEach { directory ->
+                if (!directory.exists() || !directory.isDirectory) {
+                    return@forEach
+                }
 
-        updateCacheDir.listFiles()
-            ?.filter { file ->
-                file.isFile &&
-                    file.name.startsWith("update-") &&
-                    (file.name.endsWith(".apk") || file.name.endsWith(".download"))
-            }
-            ?.forEach { file ->
-                file.delete()
+                directory.listFiles()
+                    ?.filter { file ->
+                        file.isFile &&
+                            file.name.startsWith("update-") &&
+                            (file.name.endsWith(".apk") || file.name.endsWith(".download"))
+                    }
+                    ?.forEach { file ->
+                        file.delete()
+                    }
             }
     }
 
-    private fun ensureUpdateCacheDirectory() {
-        if (!updateCacheDir.exists()) {
-            updateCacheDir.mkdirs()
+    private fun ensureUpdateStorageDirectory() {
+        if (!updateStorageDir.exists()) {
+            updateStorageDir.mkdirs()
         }
     }
 
@@ -160,7 +164,7 @@ class AppUpdateRepository(
     companion object {
         private const val DEFAULT_REPO_OWNER = "JaneJane123654"
         private const val DEFAULT_REPO_NAME = "photoRoulette"
-        private const val UPDATE_CACHE_DIRECTORY = "updates"
+        private const val UPDATE_STORAGE_DIRECTORY = "updates"
         private const val NETWORK_TIMEOUT_MS = 15_000
     }
 }

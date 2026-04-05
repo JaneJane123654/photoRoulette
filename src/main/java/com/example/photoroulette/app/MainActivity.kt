@@ -1,6 +1,7 @@
 package com.example.photoroulette.app
 
 import android.app.Activity
+import android.content.ClipData
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -166,6 +167,8 @@ class MainActivity : ComponentActivity() {
                     viewModel.updateInstallRequests.collectLatest { installUri ->
                         val installIntent = Intent(Intent.ACTION_VIEW).apply {
                             setDataAndType(installUri, "application/vnd.android.package-archive")
+                            clipData = ClipData.newUri(contentResolver, "update-apk", installUri)
+                            putExtra(Intent.EXTRA_RETURN_RESULT, true)
                             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         }
