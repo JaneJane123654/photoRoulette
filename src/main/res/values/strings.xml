@@ -107,6 +107,16 @@
     <string name="usage_guide_line_four">4) If card movement feels off, tap Reshuffle once to rebuild the deck and continue smoothly.</string>
     <string name="usage_guide_line_five">5) Default controls panel: if it appears 5 times in one month, it auto-hides for the rest of that month and auto-enables next month. If you switch it off manually, it stays off next month too.</string>
 
+    <string name="settings_usage_title">What each setting does</string>
+    <string name="settings_usage_line_display">Display: choose between full-image fit (may show margins) and crop-fill card style, and decide whether single-tap can quickly toggle this mode on the top card.</string>
+    <string name="settings_usage_line_swipe">Gestures: map actions for left/right/up/down independently, and tune swipe sensitivity to change how far you need to drag before a swipe triggers.</string>
+    <string name="settings_usage_line_gesture_ball">Gesture floating ball: preview and execute actions from the ring; you can also adjust ball size, sound feedback, and top action hints.</string>
+    <string name="settings_usage_line_delete">Delete: "Enable delete action" is the master switch; delete reminder controls post-delete prompts; floating delete button provides tap-to-delete.</string>
+    <string name="settings_usage_line_silent_delete">Silent delete: when on, deletion inside authorized folders can skip system confirmation; authorizing both DCIM and Pictures gives broader coverage.</string>
+    <string name="settings_usage_line_default_notice">Default controls panel: controls whether the startup guide panel is shown; auto-hide and manual-hide rules follow the text below.</string>
+    <string name="settings_usage_line_language">Language: switch the app UI language. "System Default" follows your device language.</string>
+    <string name="settings_usage_line_update">Update: check for a new release manually and choose to update now or be reminded later when a newer version arrives.</string>
+
     <string name="default_behavior_visibility_title">Show default controls panel</string>
     <string name="default_behavior_visibility_visible_description">On. The panel can appear on startup. It auto-hides after 5 appearances in one month.</string>
     <string name="default_behavior_visibility_auto_hidden_description">Temporarily hidden this month after appearing 5 times. It will auto-enable next month.</string>

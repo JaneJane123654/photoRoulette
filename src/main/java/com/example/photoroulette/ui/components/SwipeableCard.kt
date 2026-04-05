@@ -74,8 +74,10 @@ fun SwipeableCard(
     revealProgress: Float = 0f,
     onDragProgressChanged: (Float) -> Unit = {},
     isDownSwipeCoverEnabled: Boolean = false,
+    isUpSwipeCoverEnabled: Boolean = false,
     onDownSwipeCoverProgressChanged: (Float) -> Unit = {},
     isRightSwipeCoverEnabled: Boolean = false,
+    isLeftSwipeCoverEnabled: Boolean = false,
     onRightSwipeCoverProgressChanged: (Float) -> Unit = {},
     shape: Shape = RoundedCornerShape(28.dp),
     content: @Composable BoxScope.() -> Unit,
@@ -90,7 +92,9 @@ fun SwipeableCard(
     val currentCanSwipeUp by rememberUpdatedState(canSwipeUp)
     val currentCanSwipeDown by rememberUpdatedState(canSwipeDown)
     val currentIsDownSwipeCoverEnabled by rememberUpdatedState(isDownSwipeCoverEnabled)
+    val currentIsUpSwipeCoverEnabled by rememberUpdatedState(isUpSwipeCoverEnabled)
     val currentIsRightSwipeCoverEnabled by rememberUpdatedState(isRightSwipeCoverEnabled)
+    val currentIsLeftSwipeCoverEnabled by rememberUpdatedState(isLeftSwipeCoverEnabled)
     val currentGestureSensitivity by rememberUpdatedState(
         gestureSensitivity.coerceIn(MIN_GESTURE_SENSITIVITY, MAX_GESTURE_SENSITIVITY),
     )
@@ -104,8 +108,10 @@ fun SwipeableCard(
     var settleJob by remember { mutableStateOf<Job?>(null) }
     var lastReportedProgress by remember { mutableFloatStateOf(0f) }
     var downSwipeCoverOffsetY by remember { mutableFloatStateOf(0f) }
+    var verticalCoverDirection by remember { mutableStateOf<SwipeDirection?>(null) }
     var lastReportedDownSwipeCoverProgress by remember { mutableFloatStateOf(0f) }
     var rightSwipeCoverOffsetX by remember { mutableFloatStateOf(0f) }
+    var horizontalCoverDirection by remember { mutableStateOf<SwipeDirection?>(null) }
     var lastReportedRightSwipeCoverProgress by remember { mutableFloatStateOf(0f) }
     var gestureExclusionRects by remember { mutableStateOf<List<Rect>>(emptyList()) }
 
@@ -150,8 +156,21 @@ fun SwipeableCard(
         }
     }
 
-    LaunchedEffect(enabled, isDownSwipeCoverEnabled, isRightSwipeCoverEnabled) {
-        if (!enabled || (!isDownSwipeCoverEnabled && !isRightSwipeCoverEnabled)) {
+    LaunchedEffect(
+        enabled,
+        isDownSwipeCoverEnabled,
+        isUpSwipeCoverEnabled,
+        isRightSwipeCoverEnabled,
+        isLeftSwipeCoverEnabled,
+    ) {
+        if (
+            !enabled || (
+                !isDownSwipeCoverEnabled &&
+                    !isUpSwipeCoverEnabled &&
+                    !isRightSwipeCoverEnabled &&
+                    !isLeftSwipeCoverEnabled
+            )
+        ) {
             settleJob?.cancel()
             settleJob = null
             isSettling = false
@@ -162,9 +181,11 @@ fun SwipeableCard(
             if (downSwipeCoverOffsetY != 0f) {
                 downSwipeCoverOffsetY = 0f
             }
+            verticalCoverDirection = null
             if (rightSwipeCoverOffsetX != 0f) {
                 rightSwipeCoverOffsetX = 0f
             }
+            horizontalCoverDirection = null
             reportDragProgress(0f, force = true)
             reportDownSwipeCoverProgress(0f, force = true)
             reportRightSwipeCoverProgress(0f, force = true)
@@ -233,7 +254,9 @@ fun SwipeableCard(
                         canSwipeUp,
                         canSwipeDown,
                         isDownSwipeCoverEnabled,
+                        isUpSwipeCoverEnabled,
                         isRightSwipeCoverEnabled,
+                        isLeftSwipeCoverEnabled,
                     ) {
                         awaitEachGesture {
                             val down = awaitFirstDown(requireUnconsumed = false)
@@ -279,31 +302,96 @@ fun SwipeableCard(
 
                                 val canDriveDownSwipeCover =
                                     currentIsDownSwipeCoverEnabled && currentCanSwipeDown
-                                val shouldStartDownSwipeCover =
-                                    normalizedDelta.y > 0f && abs(normalizedDelta.y) >= abs(normalizedDelta.x)
+                                val canDriveUpSwipeCover =
+                                    currentIsUpSwipeCoverEnabled && currentCanSwipeUp
                                 val maxCoverOffset =
                                     cardSize.height.toFloat().coerceAtLeast(1f) *
                                         DOWN_SWIPE_COVER_MAX_PULL_MULTIPLIER
                                 val canDriveRightSwipeCover =
                                     currentIsRightSwipeCoverEnabled && currentCanSwipeRight
-                                val shouldStartRightSwipeCover =
-                                    normalizedDelta.x > 0f && abs(normalizedDelta.x) >= abs(normalizedDelta.y)
+                                val canDriveLeftSwipeCover =
+                                    currentIsLeftSwipeCoverEnabled && currentCanSwipeLeft
                                 val maxRightCoverOffset =
                                     cardSize.width.toFloat().coerceAtLeast(1f) *
                                         RIGHT_SWIPE_COVER_MAX_PULL_MULTIPLIER
 
+                                val verticalStartDirection = when {
+                                    normalizedDelta.y > 0f &&
+                                        abs(normalizedDelta.y) >= abs(normalizedDelta.x) &&
+                                        canDriveDownSwipeCover -> SwipeDirection.Down
+
+                                    normalizedDelta.y < 0f &&
+                                        abs(normalizedDelta.y) >= abs(normalizedDelta.x) &&
+                                        canDriveUpSwipeCover -> SwipeDirection.Up
+
+                                    else -> null
+                                }
+
+                                val horizontalStartDirection = when {
+                                    normalizedDelta.x > 0f &&
+                                        abs(normalizedDelta.x) >= abs(normalizedDelta.y) &&
+                                        canDriveRightSwipeCover -> SwipeDirection.Right
+
+                                    normalizedDelta.x < 0f &&
+                                        abs(normalizedDelta.x) >= abs(normalizedDelta.y) &&
+                                        canDriveLeftSwipeCover -> SwipeDirection.Left
+
+                                    else -> null
+                                }
+
                                 if (
-                                    canDriveDownSwipeCover &&
-                                    (downSwipeCoverOffsetY > 0f ||
-                                        (rightSwipeCoverOffsetX == 0f && shouldStartDownSwipeCover))
+                                    (verticalCoverDirection == SwipeDirection.Down && !canDriveDownSwipeCover) ||
+                                        (verticalCoverDirection == SwipeDirection.Up && !canDriveUpSwipeCover)
                                 ) {
+                                    verticalCoverDirection = null
+                                    if (downSwipeCoverOffsetY != 0f) {
+                                        downSwipeCoverOffsetY = 0f
+                                        reportDownSwipeCoverProgress(0f, force = true)
+                                    }
+                                }
+
+                                if (
+                                    (horizontalCoverDirection == SwipeDirection.Right && !canDriveRightSwipeCover) ||
+                                        (horizontalCoverDirection == SwipeDirection.Left && !canDriveLeftSwipeCover)
+                                ) {
+                                    horizontalCoverDirection = null
+                                    if (rightSwipeCoverOffsetX != 0f) {
+                                        rightSwipeCoverOffsetX = 0f
+                                        reportRightSwipeCoverProgress(0f, force = true)
+                                    }
+                                }
+
+                                val activeVerticalCoverDirection = when {
+                                    downSwipeCoverOffsetY > 0f && verticalCoverDirection != null -> {
+                                        verticalCoverDirection
+                                    }
+
+                                    rightSwipeCoverOffsetX == 0f && verticalStartDirection != null -> {
+                                        verticalCoverDirection = verticalStartDirection
+                                        verticalStartDirection
+                                    }
+
+                                    else -> null
+                                }
+
+                                if (activeVerticalCoverDirection != null) {
+                                    val coverDelta = when (activeVerticalCoverDirection) {
+                                        SwipeDirection.Down -> normalizedDelta.y
+                                        SwipeDirection.Up -> -normalizedDelta.y
+                                        else -> 0f
+                                    }
+
                                     downSwipeCoverOffsetY =
-                                        (downSwipeCoverOffsetY + normalizedDelta.y)
-                                            .coerceIn(0f, maxCoverOffset)
+                                        (downSwipeCoverOffsetY + coverDelta).coerceIn(0f, maxCoverOffset)
                                     hasDraggedCard = true
+
+                                    if (downSwipeCoverOffsetY == 0f) {
+                                        verticalCoverDirection = null
+                                    }
 
                                     if (rightSwipeCoverOffsetX != 0f) {
                                         rightSwipeCoverOffsetX = 0f
+                                        horizontalCoverDirection = null
                                         reportRightSwipeCoverProgress(0f, force = true)
                                     }
 
@@ -323,18 +411,37 @@ fun SwipeableCard(
                                     return
                                 }
 
-                                if (
-                                    canDriveRightSwipeCover &&
-                                    (rightSwipeCoverOffsetX > 0f ||
-                                        (downSwipeCoverOffsetY == 0f && shouldStartRightSwipeCover))
-                                ) {
+                                val activeHorizontalCoverDirection = when {
+                                    rightSwipeCoverOffsetX > 0f && horizontalCoverDirection != null -> {
+                                        horizontalCoverDirection
+                                    }
+
+                                    downSwipeCoverOffsetY == 0f && horizontalStartDirection != null -> {
+                                        horizontalCoverDirection = horizontalStartDirection
+                                        horizontalStartDirection
+                                    }
+
+                                    else -> null
+                                }
+
+                                if (activeHorizontalCoverDirection != null) {
+                                    val coverDelta = when (activeHorizontalCoverDirection) {
+                                        SwipeDirection.Right -> normalizedDelta.x
+                                        SwipeDirection.Left -> -normalizedDelta.x
+                                        else -> 0f
+                                    }
+
                                     rightSwipeCoverOffsetX =
-                                        (rightSwipeCoverOffsetX + normalizedDelta.x)
-                                            .coerceIn(0f, maxRightCoverOffset)
+                                        (rightSwipeCoverOffsetX + coverDelta).coerceIn(0f, maxRightCoverOffset)
                                     hasDraggedCard = true
+
+                                    if (rightSwipeCoverOffsetX == 0f) {
+                                        horizontalCoverDirection = null
+                                    }
 
                                     if (downSwipeCoverOffsetY != 0f) {
                                         downSwipeCoverOffsetY = 0f
+                                        verticalCoverDirection = null
                                         reportDownSwipeCoverProgress(0f, force = true)
                                     }
 
@@ -356,11 +463,13 @@ fun SwipeableCard(
 
                                 if (downSwipeCoverOffsetY != 0f) {
                                     downSwipeCoverOffsetY = 0f
+                                    verticalCoverDirection = null
                                     reportDownSwipeCoverProgress(0f, force = true)
                                 }
 
                                 if (rightSwipeCoverOffsetX != 0f) {
                                     rightSwipeCoverOffsetX = 0f
+                                    horizontalCoverDirection = null
                                     reportRightSwipeCoverProgress(0f, force = true)
                                 }
 
@@ -473,11 +582,27 @@ fun SwipeableCard(
                                 val rightSwipeCoverThreshold = cardSize.width.toFloat()
                                     .coerceAtLeast(1f) * RIGHT_SWIPE_COVER_CONFIRM_FRACTION
 
-                                if (
-                                    currentIsDownSwipeCoverEnabled &&
-                                        currentCanSwipeDown &&
-                                        downSwipeCoverOffsetY > 0f
-                                ) {
+                                val activeVerticalCoverDirection = when (verticalCoverDirection) {
+                                    SwipeDirection.Down -> {
+                                        if (currentIsDownSwipeCoverEnabled && currentCanSwipeDown) {
+                                            SwipeDirection.Down
+                                        } else {
+                                            null
+                                        }
+                                    }
+
+                                    SwipeDirection.Up -> {
+                                        if (currentIsUpSwipeCoverEnabled && currentCanSwipeUp) {
+                                            SwipeDirection.Up
+                                        } else {
+                                            null
+                                        }
+                                    }
+
+                                    else -> null
+                                }
+
+                                if (activeVerticalCoverDirection != null && downSwipeCoverOffsetY > 0f) {
                                     val shouldConfirmDownSwipeCover =
                                         downSwipeCoverOffsetY >= downSwipeCoverThreshold
 
@@ -496,7 +621,7 @@ fun SwipeableCard(
                                             )
                                         }
 
-                                        val handled = currentOnSwiped(SwipeDirection.Down)
+                                        val handled = currentOnSwiped(activeVerticalCoverDirection)
                                         if (!handled) {
                                             animateValueTo(
                                                 startValue = downSwipeCoverOffsetY,
@@ -529,16 +654,34 @@ fun SwipeableCard(
                                         }
                                     }
 
+                                    verticalCoverDirection = null
+
                                     isSettling = false
                                     settleJob = null
                                     return@launch
                                 }
 
-                                if (
-                                    currentIsRightSwipeCoverEnabled &&
-                                        currentCanSwipeRight &&
-                                        rightSwipeCoverOffsetX > 0f
-                                ) {
+                                val activeHorizontalCoverDirection = when (horizontalCoverDirection) {
+                                    SwipeDirection.Right -> {
+                                        if (currentIsRightSwipeCoverEnabled && currentCanSwipeRight) {
+                                            SwipeDirection.Right
+                                        } else {
+                                            null
+                                        }
+                                    }
+
+                                    SwipeDirection.Left -> {
+                                        if (currentIsLeftSwipeCoverEnabled && currentCanSwipeLeft) {
+                                            SwipeDirection.Left
+                                        } else {
+                                            null
+                                        }
+                                    }
+
+                                    else -> null
+                                }
+
+                                if (activeHorizontalCoverDirection != null && rightSwipeCoverOffsetX > 0f) {
                                     val shouldConfirmRightSwipeCover =
                                         rightSwipeCoverOffsetX >= rightSwipeCoverThreshold
 
@@ -557,7 +700,7 @@ fun SwipeableCard(
                                             )
                                         }
 
-                                        val handled = currentOnSwiped(SwipeDirection.Right)
+                                        val handled = currentOnSwiped(activeHorizontalCoverDirection)
                                         if (!handled) {
                                             animateValueTo(
                                                 startValue = rightSwipeCoverOffsetX,
@@ -589,6 +732,8 @@ fun SwipeableCard(
                                             )
                                         }
                                     }
+
+                                    horizontalCoverDirection = null
 
                                     isSettling = false
                                     settleJob = null
