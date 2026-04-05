@@ -2,9 +2,9 @@ package com.example.photoroulette.viewmodel
 
 import android.Manifest
 import android.app.Application
-impoimport android.net.Uri
+import android.net.Uri
 import android.os.Build
-imimport android.provider.MediaStore
+import android.provider.MediaStore
 import androidx.activity.result.IntentSenderRequest
 import androidx.core.content.FileProvider
 import android.provider.DocumentsContract
@@ -29,7 +29,7 @@ import com.example.photoroulette.utils.PermissionHelper
 import com.example.photoroulette.utils.VersionNameUtils
 import com.example.photoroulette.viewmodel.states.HomeUiState
 import java.io.File
-import java.util.ArrayLisimport java.util.ArrayDeque
+import java.util.ArrayDeque
 import java.util.ArrayList
 import java.util.Calendar
 import java.util.Locale
@@ -682,7 +682,27 @@ class MainViewModel(
 
         while (pendingSystemDeleteRequests.isNotEmpty()) {
             val nextRequest = pendingSystemDeleteRequests.removeFirst()
-Not { id -> availableIds.contains(id) }
+            if (!pendingDeleteEntries.containsKey(nextRequest.imageId)) {
+                continue
+            }
+
+            activeSystemDeleteRequest = nextRequest
+            if (!_deleteRequests.tryEmit(nextRequest.request)) {
+                scope.launch {
+                    _deleteRequests.emit(nextRequest.request)
+                }
+            }
+            return
+        }
+    }
+
+    private fun reconcilePendingDeletesWithAvailableIds(availableIds: Set<Long>) {
+        if (pendingDeleteEntries.isEmpty()) {
+            return
+        }
+
+        val deletedIds = pendingDeleteEntries.keys
+            .filterNot { id -> availableIds.contains(id) }
             .toSet()
 
         if (deletedIds.isEmpty()) {
@@ -699,7 +719,43 @@ Not { id -> availableIds.contains(id) }
         }
     }
 
-atingDeleteButton(enabled: Boolean) {
+    fun setSwipeDeleteEnabled(enabled: Boolean) {
+        _isSwipeDeleteEnabled.value = enabled
+        savedStateHandle[KEY_IS_SWIPE_DELETE_ENABLED] = enabled
+        scope.launch(ioDispatcher) {
+            settingsRepository.setSwipeDeleteEnabled(enabled)
+        }
+    }
+
+    fun setDeleteReminderEnabled(enabled: Boolean) {
+        _isDeleteReminderEnabled.value = enabled
+        savedStateHandle[KEY_IS_DELETE_REMINDER_ENABLED] = enabled
+        scope.launch(ioDispatcher) {
+            settingsRepository.setDeleteReminderEnabled(enabled)
+        }
+    }
+
+    fun setSwipeGestureSensitivity(sensitivity: Float) {
+        scope.launch(ioDispatcher) {
+            settingsRepository.setSwipeGestureSensitivity(sensitivity)
+        }
+    }
+
+    fun setShowFullImage(enabled: Boolean) {
+        scope.launch(ioDispatcher) {
+            settingsRepository.setShowFullImage(enabled)
+        }
+    }
+
+    fun setTapImageToggleEnabled(enabled: Boolean) {
+        _isTapImageToggleEnabled.value = enabled
+        savedStateHandle[KEY_IS_TAP_IMAGE_TOGGLE_ENABLED] = enabled
+        scope.launch(ioDispatcher) {
+            settingsRepository.setTapImageToggleEnabled(enabled)
+        }
+    }
+
+    fun setShowFloatingDeleteButton(enabled: Boolean) {
         scope.launch(ioDispatcher) {
             settingsRepository.setShowFloatingDeleteButton(enabled)
         }
@@ -1012,91 +1068,7 @@ atingDeleteButton(enabled: Boolean) {
             HomeUiState.Empty
         } else {
             HomeUiState.Ready(
-                visibleCards = visibleCards,
-                canSwipeToPrevious = canSwipeToPrevious(),
-                canSwipeToNext = canSwipeToNext(),
-            )
-        }
-    }
-
-    private fun preloadUpcomingImages() {
-        if (_permissionMode.value == PermissionHelper.PermissionMode.DENIED) {
-            return
-        }
-
-        val preloadCards = queueIds
-            .drop(currentIndex + HomeUiState.MAX_VISIBLE_CARD_COUNT)
-            .take(PRELOAD_AHEAD_COUNT)
-            .mapNotNull { id -> mediaCardCache[id] }
-
-        preloadCards.forEach { card ->
-            val requestBuilder = ImageRequest.Builder(getApplication<Application>())
-                .data(card.previewUri)
-
-            if (card.isVideoLike) {
-                requestBuilder.videoFrameMillis(0)
-            }
-
-            imageLoader.enqueue(
-                requestBuilder.build(),
-            )
-        }
-    }
-
-    private fun updateMediaCardCache(cards: List<MediaCard>) {
-        mediaCardCache.clear()
-        cards.forEach { card ->
-            mediaCardCache[card.id] = card
-        }
-    }
-
-    private fun hasCachedCardsForVisibleWindow(): Boolean {
-        val visibleIds = queueIds
-            .drop(currentIndex)
-            .take(HomeUiState.MAX_VISIBLE_CARD_COUNT)
-
-        return visibleIds.isNotEmpty() && visibleIds.all { id -> mediaCardCache.containsKey(id) }
-    }
-
-    private fun isTopVisibleId(imageId: Long): Boolean = queueIds.getOrNull(currentIndex) == imageId
-
-    private fun canSwipeToPrevious(): Boolean = currentIndex > 0
-
-    private fun canSwipeToNext(): Boolean = currentIndex + 1 < queueIds.size
-
-    private fun restoreQueueIds(): MutableList<Long> {
-        return savedStateHandle.get<LongArray>(KEY_QUEUE_IDS)?.toMutableList() ?: mutableListOf()
-    }
-
-    private fun saveQueueIds() {
-        savedStateHandle[KEY_QUEUE_IDS] = queueIds.toLongArray()
-    }
-
-    private fun restoredSwipeAction(key: String): SwipeAction? {
-        return SwipeAction.fromStorageValue(savedStateHandle[key])
-    }
-
-    private fun restoredDefaultBehaviorNoticeMode(): DefaultBehaviorNoticeMode {
-        return DefaultBehaviorNoticeMode.fromStorageValue(
-            savedStateHandle[KEY_DEFAULT_BEHAVIOR_NOTICE_MODE],
-        ) ?: DefaultBehaviorNoticeMode.Visible
-    }
-
-    private suspend fun prepareDefaultBehaviorNoticeForSessionIfNeeded() {
-        if (hasPreparedDefaultBehaviorNoticeForSession) {
-            return
-        }
-
-        if (_permissionMode.value == PermissionHelper.PermissionMode.DENIED) {
-            return
-        }
-
-        val shouldShowNotice = settingsRepository.prepareDefaultBehaviorNoticeForSession(
-            currentMonthKey = currentMonthKey(),
-            monthlyDisplayLimit = DEFAULT_BEHAVIOR_NOTICE_MONTHLY_MAX_SHOWN,
-        )
-        hasPreparedDefaultBehaviorNoticeForSession = true
-        savedStateHandle[KEY                previousCard = queueIds
+                previousCard = queueIds
                     .getOrNull(currentIndex - 1)
                     ?.let { id -> mediaCardCache[id] },
                 visibleCards = visibleCards,
@@ -1352,3 +1324,53 @@ atingDeleteButton(enabled: Boolean) {
                 previousCard = queueIds
                     .getOrNull(currentIndex - 1)
                     ?.let { id -> mediaCardCache[id] },
+                visibleCards = queueIds
+                    .drop(currentIndex)
+                    .take(HomeUiState.MAX_VISIBLE_CARD_COUNT)
+                    .mapNotNull { id -> mediaCardCache[id] },
+                canSwipeToPrevious = canSwipeToPrevious(),
+                canSwipeToNext = canSwipeToNext(),
+            )
+        }
+
+        queueIds.isNotEmpty() -> HomeUiState.Loading
+        pendingDeleteEntries.isNotEmpty() -> HomeUiState.Empty
+        else -> HomeUiState.Loading
+    }
+
+    private fun defaultRestoredPermissionMode(): PermissionHelper.PermissionMode = when {
+        queueIds.isNotEmpty() || pendingDeleteEntries.isNotEmpty() -> PermissionHelper.PermissionMode.GRANTED_ALL
+        else -> PermissionHelper.PermissionMode.DENIED
+    }
+
+    private companion object {
+        const val EXTERNAL_MEDIA_VOLUME = "external"
+        const val KEY_QUEUE_IDS = "queue_ids"
+        const val KEY_CURRENT_INDEX = "current_index"
+        const val KEY_PERMISSION_MODE = "permission_mode"
+        const val KEY_IS_SWIPE_DELETE_ENABLED = "is_swipe_delete_enabled"
+        const val KEY_IS_DELETE_REMINDER_ENABLED = "is_delete_reminder_enabled"
+        const val KEY_SWIPE_GESTURE_SENSITIVITY = "swipe_gesture_sensitivity"
+        const val KEY_SHOW_FULL_IMAGE = "show_full_image"
+        const val KEY_IS_TAP_IMAGE_TOGGLE_ENABLED = "is_tap_image_toggle_enabled"
+        const val KEY_SHOW_FLOATING_DELETE_BUTTON = "show_floating_delete_button"
+        const val KEY_IS_GESTURE_BALL_ENABLED = "is_gesture_ball_enabled"
+        const val KEY_GESTURE_BALL_SIZE_SCALE = "gesture_ball_size_scale"
+        const val KEY_IS_GESTURE_BALL_FEEDBACK_ENABLED = "is_gesture_ball_feedback_enabled"
+        const val KEY_SHOW_GESTURE_BALL_ACTION_HINT = "show_gesture_ball_action_hint"
+        const val KEY_IS_SILENT_DELETE_ENABLED = "is_silent_delete_enabled"
+        const val KEY_SILENT_DELETE_TREE_URIS = "silent_delete_tree_uris"
+        const val KEY_SILENT_DELETE_TREE_URI = "silent_delete_tree_uri"
+        const val KEY_APP_LANGUAGE_TAG = "app_language_tag"
+        const val KEY_SWIPE_LEFT_ACTION = "swipe_left_action"
+        const val KEY_SWIPE_RIGHT_ACTION = "swipe_right_action"
+        const val KEY_SWIPE_UP_ACTION = "swipe_up_action"
+        const val KEY_SWIPE_DOWN_ACTION = "swipe_down_action"
+        const val KEY_DEFAULT_BEHAVIOR_NOTICE_MODE = "default_behavior_notice_mode"
+        const val KEY_SHOULD_SHOW_DEFAULT_BEHAVIOR_NOTICE = "should_show_default_behavior_notice"
+        const val KEY_HAS_PREPARED_DEFAULT_BEHAVIOR_NOTICE = "has_prepared_default_behavior_notice"
+        const val KEY_SKIPPED_UPDATE_VERSION = "skipped_update_version"
+        const val PRELOAD_AHEAD_COUNT = 6
+        const val DEFAULT_BEHAVIOR_NOTICE_MONTHLY_MAX_SHOWN = 5
+    }
+}

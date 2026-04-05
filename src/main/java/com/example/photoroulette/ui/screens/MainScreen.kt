@@ -1,24 +1,31 @@
 package com.example.photoroulette.ui.screens
 
-imimport android.graphics.Bitmap
+import android.graphics.Bitmap
 import android.graphics.Color as AndroidColor
 import android.net.Uri
 import android.view.HapticFeedbackConstants
 import android.view.SoundEffectConstants
-imporport androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.VectorConverter
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-pose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.calculateCentroid
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compoimport androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androix.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -105,12 +112,6 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.example.photoroulette.R
 import com.example.photoroulette.BuildConfig
-import com.github.panpf.zoomimage.CoilZoomAsyncImage
-import com.github.panpf.zoomimage.compose.zoom.isNotEmpty
-import com.github.panpf.zoomimage.rememberCoilZoomState
-import com.github.panpf.zoomimage.zoom.ContinuousTransformType
-import com.github.panpf.zoomimage.zoom.GestureType
-import com.github.panpf.zoomimage.zoom.ScalesCalculator
 import com.example.photoroulette.data.datastore.SettingsRepository
 import com.example.photoroulette.model.AppReleaseInfo
 import com.example.photoroulette.model.DefaultBehaviorNoticeMode
@@ -120,7 +121,6 @@ import com.example.photoroulette.model.SilentDeleteScope
 import com.example.photoroulette.model.SwipeAction
 import com.example.photoroulette.model.UpdateCheckFeedback
 import coil.compose.AsyncImage
-import coil.imageLoader
 import coil.request.ImageRequest
 import coil.request.videoFrameMillis
 import com.example.photoroulette.ui.components.EmptyGalleryScreen
@@ -136,9 +136,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collectLatest
-impoimport kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-ring,
+@Composable
+fun MainScreen(
+    onRequestPermission: () -> Unit,
+    onOpenSettings: () -> Unit,
+    selectedLanguageTag: String,
     onLanguageTagChange: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: MainViewModel = viewModel(),
@@ -412,12 +415,7 @@ private fun MainScreenContent(
 
                         HomeUiState.Empty -> EmptyGalleryScreen()
                         is HomeUiState.Ready -> PhotoDeck(
-                            visibleCards = effectiveState.visibleCards,
-                            canSwipePrevious = effectiveState.canSwipeToPrevious,
-                            canSwipeNext = effectiveState.canSwipeToNext,
-                            isSwipeDeleteEnabled = isSwipeDeleteEnabled,
-                            swipeGestureSensitivity = swipeGestureSensitivity,
-                            swipeLe                            previousCard = effectiveState.previousCard,
+                            previousCard = effectiveState.previousCard,
                             visibleCards = effectiveState.visibleCards,
                             canSwipePrevious = effectiveState.canSwipeToPrevious,
                             canSwipeNext = effectiveState.canSwipeToNext,
@@ -2898,7 +2896,7 @@ private fun PhotoDeck(
             }
 
             if (shouldUsePreviousCardTopCover) {
-                val coverCard = previousCard!!
+                val coverCard = previousCard
                 key("cover-${coverCard.id}") {
                     SwipeableCard(
                         onSwiped = { false },
@@ -2969,7 +2967,8 @@ private fun MediaCardContent(
         -> {
             VideoCardContent(
                 card = card,
-                isTopCard = isTo                val coverCard = previousCard
+                isTopCard = isTopCard,
+                playerPool = playerPool,
                 showFullImage = showFullImage,
                 onGestureLockChanged = onGestureLockChanged,
                 modifier = modifier,
@@ -2989,6 +2988,7 @@ private fun StaticPhotoCardImage(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val gestureScope = rememberCoroutineScope()
     val request = remember(context, card.id, card.previewUri) {
         ImageRequest.Builder(context)
             .data(card.previewUri)
@@ -2998,6 +2998,11 @@ private fun StaticPhotoCardImage(
     }
 
     var visualState by remember(card.id) { mutableStateOf(PhotoVisualState.Loading) }
+    var imageScale by remember(card.id) { mutableFloatStateOf(MIN_PHOTO_GESTURE_SCALE) }
+    var imageOffset by remember(card.id) { mutableStateOf(Offset.Zero) }
+    var containerSize by remember(card.id) { mutableStateOf(IntSize.Zero) }
+    var hasTwoFingerTransformActive by remember(card.id) { mutableStateOf(false) }
+    var resetTransformJob by remember(card.id) { mutableStateOf<Job?>(null) }
     val currentOnGestureLockChanged by rememberUpdatedState(onGestureLockChanged)
     val currentOnTapWhenIdle by rememberUpdatedState(onTapWhenIdle)
     val placeholderPainter = ColorPainter(
@@ -3005,14 +3010,121 @@ private fun StaticPhotoCardImage(
     )
     val transparentPainter = remember { ColorPainter(Color.Transparent) }
 
-    LaunchedEffect(enableTwoFingerTransform) {
+    fun clampImageOffset(target: Offset, scale: Float): Offset {
+        if (containerSize.width <= 0 || containerSize.height <= 0) {
+            return Offset.Zero
+        }
+
+        val maxX = (containerSize.width.toFloat() * (scale - 1f) / 2f).coerceAtLeast(0f)
+        val maxY = (containerSize.height.toFloat() * (scale - 1f) / 2f).coerceAtLeast(0f)
+
+        return Offset(
+            x = target.x.coerceIn(-maxX, maxX),
+            y = target.y.coerceIn(-maxY, maxY),
+        )
+    }
+
+    fun shouldLockCardGestures(
+        scale: Float,
+        offset: Offset,
+        hasTwoFingerGestureActive: Boolean,
+    ): Boolean {
+        val offsetDistance = offset.getDistanceValue()
+        val horizontalOffsetAbs = abs(offset.x)
+        val verticalOffsetAbs = abs(offset.y)
+
+        val scaleLocked = scale > MIN_PHOTO_GESTURE_SCALE + PHOTO_GESTURE_LOCK_SCALE_EPSILON
+        val horizontalStillAtEdge = horizontalOffsetAbs <= PHOTO_GESTURE_AXIS_UNLOCK_EPSILON
+        val verticalStillAtEdge = verticalOffsetAbs <= PHOTO_GESTURE_AXIS_UNLOCK_EPSILON
+
+        return hasTwoFingerGestureActive ||
+            scaleLocked ||
+            (offsetDistance > PHOTO_GESTURE_OFFSET_LOCK_EPSILON &&
+                !horizontalStillAtEdge &&
+                !verticalStillAtEdge)
+    }
+
+    fun cancelResetTransformAnimation() {
+        resetTransformJob?.cancel()
+        resetTransformJob = null
+    }
+
+    suspend fun animateResetTransform() {
+        val startScale = imageScale
+        val startOffset = imageOffset
+
+        if (
+            startScale <= MIN_PHOTO_GESTURE_SCALE + PHOTO_GESTURE_LOCK_SCALE_EPSILON &&
+            startOffset.getDistanceValue() <= PHOTO_GESTURE_OFFSET_LOCK_EPSILON
+        ) {
+            imageScale = MIN_PHOTO_GESTURE_SCALE
+            imageOffset = Offset.Zero
+            return
+        }
+
+        coroutineScope {
+            launch {
+                val scaleAnim = Animatable(startScale)
+                scaleAnim.animateTo(
+                    targetValue = MIN_PHOTO_GESTURE_SCALE,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMediumLow,
+                    ),
+                ) {
+                    imageScale = value
+                }
+            }
+
+            launch {
+                val offsetAnim = Animatable(
+                    initialValue = startOffset,
+                    typeConverter = Offset.VectorConverter,
+                )
+                offsetAnim.animateTo(
+                    targetValue = Offset.Zero,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioNoBouncy,
+                        stiffness = Spring.StiffnessMediumLow,
+                    ),
+                ) {
+                    imageOffset = value
+                }
+            }
+        }
+
+        imageScale = MIN_PHOTO_GESTURE_SCALE
+        imageOffset = Offset.Zero
+    }
+
+    val cardGestureLocked =
+        enableTwoFingerTransform && shouldLockCardGestures(
+            scale = imageScale,
+            offset = imageOffset,
+            hasTwoFingerGestureActive = hasTwoFingerTransformActive,
+        )
+
+    val canTapToResetTransform =
+        imageScale > MIN_PHOTO_GESTURE_SCALE + PHOTO_GESTURE_LOCK_SCALE_EPSILON ||
+            imageOffset.getDistanceValue() > PHOTO_GESTURE_OFFSET_LOCK_EPSILON
+
+    LaunchedEffect(enableTwoFingerTransform, card.id) {
         if (!enableTwoFingerTransform) {
+            cancelResetTransformAnimation()
+            hasTwoFingerTransformActive = false
+            imageScale = MIN_PHOTO_GESTURE_SCALE
+            imageOffset = Offset.Zero
             currentOnGestureLockChanged(false)
         }
     }
 
+    LaunchedEffect(cardGestureLocked) {
+        currentOnGestureLockChanged(cardGestureLocked)
+    }
+
     DisposableEffect(currentOnGestureLockChanged) {
         onDispose {
+            cancelResetTransformAnimation()
             currentOnGestureLockChanged(false)
         }
     }
@@ -3020,6 +3132,10 @@ private fun StaticPhotoCardImage(
     Box(
         modifier = modifier
             .fillMaxSize()
+            .onSizeChanged { size ->
+                containerSize = size
+                imageOffset = clampImageOffset(imageOffset, imageScale)
+            }
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
@@ -3027,7 +3143,122 @@ private fun StaticPhotoCardImage(
                         MaterialTheme.colorScheme.surfaceContainer,
                     ),
                 ),
-            ),
+            )
+            .pointerInput(enableTwoFingerTransform, card.id, containerSize) {
+                if (!enableTwoFingerTransform) {
+                    hasTwoFingerTransformActive = false
+                    return@pointerInput
+                }
+
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false)
+                    cancelResetTransformAnimation()
+                    hasTwoFingerTransformActive = false
+
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val activePointers = event.changes.count { it.pressed }
+                        if (activePointers == 0) {
+                            break
+                        }
+
+                        val shouldTransform =
+                            activePointers >= 2 &&
+                                containerSize.width > 0 &&
+                                containerSize.height > 0
+                        hasTwoFingerTransformActive = shouldTransform
+
+                        if (shouldTransform) {
+                            val zoomChange = event.calculateZoom()
+                            val panChange = event.calculatePan()
+                            val centroid = event.calculateCentroid(useCurrent = true)
+                            if (!zoomChange.isFinite() || zoomChange <= 0f || !centroid.isSpecified) {
+                                event.changes.forEach { change ->
+                                    if (change.pressed) {
+                                        change.consume()
+                                    }
+                                }
+                                continue
+                            }
+
+                            val currentScale = imageScale
+                            val rawNextScale = (currentScale * zoomChange).coerceIn(
+                                MIN_PHOTO_GESTURE_SCALE,
+                                MAX_PHOTO_GESTURE_SCALE,
+                            )
+                            val nextScale = if (
+                                rawNextScale <= MIN_PHOTO_GESTURE_SCALE + PHOTO_GESTURE_RESET_SNAP_EPSILON
+                            ) {
+                                MIN_PHOTO_GESTURE_SCALE
+                            } else {
+                                rawNextScale
+                            }
+                            val scaleRatio = if (currentScale > PHOTO_GESTURE_EPSILON) {
+                                nextScale / currentScale
+                            } else {
+                                1f
+                            }
+                            val containerCenter = Offset(
+                                x = containerSize.width / 2f,
+                                y = containerSize.height / 2f,
+                            )
+                            val nextOffset = if (
+                                nextScale <= MIN_PHOTO_GESTURE_SCALE + PHOTO_GESTURE_EPSILON
+                            ) {
+                                Offset.Zero
+                            } else {
+                                clampImageOffset(
+                                    target =
+                                        (imageOffset * scaleRatio) +
+                                            ((centroid - containerCenter) * (1f - scaleRatio)) +
+                                            panChange,
+                                    scale = nextScale,
+                                )
+                            }
+
+                            imageScale = nextScale
+                            imageOffset = nextOffset
+                            event.changes.forEach { change -> change.consume() }
+                        } else if (imageScale > MIN_PHOTO_GESTURE_SCALE + PHOTO_GESTURE_LOCK_SCALE_EPSILON) {
+                            event.changes.forEach { change ->
+                                if (change.positionChange() != Offset.Zero) {
+                                    change.consume()
+                                }
+                            }
+                        }
+                    }
+
+                    hasTwoFingerTransformActive = false
+                }
+            }
+            .pointerInput(enableTwoFingerTransform, enableTapToggle, canTapToResetTransform, card.id) {
+                if (!enableTwoFingerTransform && !enableTapToggle) {
+                    return@pointerInput
+                }
+
+                if (!canTapToResetTransform && !enableTapToggle) {
+                    return@pointerInput
+                }
+
+                detectTapGestures(
+                    onTap = {
+                        if (canTapToResetTransform) {
+                            cancelResetTransformAnimation()
+                            resetTransformJob = gestureScope.launch {
+                                animateResetTransform()
+                            }.also { job ->
+                                job.invokeOnCompletion {
+                                    if (resetTransformJob == job) {
+                                        resetTransformJob = null
+                                    }
+                                }
+                            }
+                        } else if (enableTapToggle) {
+                            currentOnTapWhenIdle()
+                        }
+                    },
+                )
+            },
     ) {
         if (visualState != PhotoVisualState.Ready) {
             PhotoFallbackContent(
@@ -3036,65 +3267,25 @@ private fun StaticPhotoCardImage(
             )
         }
 
-        if (enableTwoFingerTransform) {
-            val zoomState = rememberCoilZoomState()
-            val zoomableState = zoomState.zoomable
-            val hasUserTransform = zoomableState.userTransform.isNotEmpty()
-            val cardGestureLocked =
-                hasUserTransform ||
-                    zoomableState.continuousTransformType != ContinuousTransformType.NONE
-
-            LaunchedEffect(zoomableState) {
-                zoomableState.setLimitOffsetWithinBaseVisibleRect(true)
-                zoomableState.setScalesCalculator(ScalesCalculator.fixed(2f))
-                zoomableState.setThreeStepScale(false)
-                zoomableState.setRubberBandScale(false)
-                zoomableState.setKeepTransformWhenSameAspectRatioContentSizeChanged(false)
-                zoomableState.setDisabledGestureTypes(
-                    GestureType.ONE_FINGER_SCALE or GestureType.DOUBLE_TAP_SCALE,
-                )
-            }
-
-            LaunchedEffect(cardGestureLocked) {
-                currentOnGestureLockChanged(cardGestureLocked)
-            }
-
-            CoilZoomAsyncImage(
-                model = request,
-                contentDescription = stringResource(id = R.string.photo_content_description),
-                imageLoader = context.imageLoader,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = if (showFullImage) ContentScale.Fit else ContentScale.Crop,
-                placeholder = placeholderPainter,
-                error = transparentPainter,
-                fallback = transparentPainter,
-                zoomState = zoomState,
-                scrollBar = null,
-                onLoading = { visualState = PhotoVisualState.Loading },
-                onSuccess = { visualState = PhotoVisualState.Ready },
-                onError = { visualState = PhotoVisualState.Error },
-                onTap = {
-                    if (zoomableState.userTransform.isNotEmpty()) {
-                        zoomableState.reset()
-                    } else if (enableTapToggle) {
-                        currentOnTapWhenIdle()
-                    }
+        AsyncImage(
+            model = request,
+            contentDescription = stringResource(id = R.string.photo_content_description),
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    scaleX = imageScale
+                    scaleY = imageScale
+                    translationX = imageOffset.x
+                    translationY = imageOffset.y
                 },
-            )
-        } else {
-            AsyncImage(
-                model = request,
-                contentDescription = stringResource(id = R.string.photo_content_description),
-                modifier = Modifier.fillMaxSize(),
-                contentScale = if (showFullImage) ContentScale.Fit else ContentScale.Crop,
-                placeholder = placeholderPainter,
-                error = transparentPainter,
-                fallback = transparentPainter,
-                onLoading = { visualState = PhotoVisualState.Loading },
-                onSuccess = { visualState = PhotoVisualState.Ready },
-                onError = { visualState = PhotoVisualState.Error },
-            )
-        }
+            contentScale = if (showFullImage) ContentScale.Fit else ContentScale.Crop,
+            placeholder = placeholderPainter,
+            error = transparentPainter,
+            fallback = transparentPainter,
+            onLoading = { visualState = PhotoVisualState.Loading },
+            onSuccess = { visualState = PhotoVisualState.Ready },
+            onError = { visualState = PhotoVisualState.Error },
+        )
     }
 }
 
@@ -3607,6 +3798,14 @@ private fun canSwipeForAction(
 
 private const val CARD_ASPECT_RATIO = 0.72f
 private const val BACK_CARD_REVEAL_MULTIPLIER = 0.72f
+private const val TOP_CARD_DOWN_PULL_SCALE_REDUCTION = 0.05f
+private const val MIN_PHOTO_GESTURE_SCALE = 1f
+private const val MAX_PHOTO_GESTURE_SCALE = 4f
+private const val PHOTO_GESTURE_EPSILON = 0.0001f
+private const val PHOTO_GESTURE_LOCK_SCALE_EPSILON = 0.02f
+private const val PHOTO_GESTURE_OFFSET_LOCK_EPSILON = 0.5f
+private const val PHOTO_GESTURE_AXIS_UNLOCK_EPSILON = 0.8f
+private const val PHOTO_GESTURE_RESET_SNAP_EPSILON = 0.03f
 private val CARD_LAYER_INSET = 12.dp
 private val MAX_DECK_WIDTH = 460.dp
 private val FLOATING_DELETE_BUTTON_SIZE = 54.dp
@@ -3638,7 +3837,8 @@ private fun MainScreenReadyPreview() {
                     kind = MediaKind.Image,
                     previewUri = Uri.EMPTY,
                 ),
-    MediaCard(
+                visibleCards = listOf(
+                    MediaCard(
                         id = 11L,
                         mimeType = "image/jpeg",
                         kind = MediaKind.Image,
@@ -3659,4 +3859,134 @@ private fun MainScreenReadyPreview() {
                         durationMs = 800L,
                     ),
                 ),
-private const val TOP_CARD_DOWN_PULL_SCALE_REDUCTION = 0.05f
+                canSwipeToPrevious = true,
+                canSwipeToNext = true,
+            ),
+            permissionMode = PermissionHelper.PermissionMode.GRANTED_PARTIAL,
+            isSwipeDeleteEnabled = true,
+            isDeleteReminderEnabled = SettingsRepository.DEFAULT_DELETE_REMINDER_ENABLED,
+            swipeGestureSensitivity = SettingsRepository.DEFAULT_SWIPE_GESTURE_SENSITIVITY,
+            showFullImage = false,
+            isTapImageToggleEnabled = SettingsRepository.DEFAULT_TAP_IMAGE_TOGGLE_ENABLED,
+            showFloatingDeleteButton = true,
+            isGestureBallEnabled = true,
+            gestureBallSizeScale = SettingsRepository.DEFAULT_GESTURE_BALL_SIZE_SCALE,
+            isGestureBallFeedbackEnabled = SettingsRepository.DEFAULT_GESTURE_BALL_FEEDBACK_ENABLED,
+            showGestureBallActionHint = SettingsRepository.DEFAULT_GESTURE_BALL_ACTION_HINT_ENABLED,
+            isSilentDeleteEnabled = true,
+            silentDeleteDcimLabel = "DCIM",
+            silentDeletePicturesLabel = "Pictures",
+            hasDcimDirectoryAuthorized = true,
+            hasPicturesDirectoryAuthorized = true,
+            swipeLeftAction = PREVIEW_DEFAULT_LEFT_ACTION,
+            swipeRightAction = PREVIEW_DEFAULT_RIGHT_ACTION,
+            swipeUpAction = PREVIEW_DEFAULT_UP_ACTION,
+            swipeDownAction = PREVIEW_DEFAULT_DOWN_ACTION,
+            defaultBehaviorNoticeMode = DefaultBehaviorNoticeMode.Visible,
+            shouldShowDefaultBehaviorNotice = true,
+            availableUpdateRelease = null,
+            updateCheckFeedback = UpdateCheckFeedback.Idle,
+            isUpdateInstallInProgress = false,
+            snackbarHostState = previewSnackbarHostState,
+            onRequestPermission = {},
+            onOpenSettings = {},
+            onPermissionRationaleDismissed = {},
+            onRefresh = {},
+            onSwipeDeleteEnabledChange = {},
+            onDeleteReminderEnabledChange = {},
+            onSwipeGestureSensitivityChange = {},
+            onShowFullImageChange = {},
+            onTapImageToggleEnabledChange = {},
+            onShowFloatingDeleteButtonChange = {},
+            onGestureBallEnabledChange = {},
+            onGestureBallSizeScaleChange = {},
+            onGestureBallFeedbackEnabledChange = {},
+            onShowGestureBallActionHintChange = {},
+            onSilentDeleteEnabledChange = {},
+            onConfigureSilentDeleteDcimDirectory = {},
+            onConfigureSilentDeletePicturesDirectory = {},
+            onSwipeLeftActionChange = {},
+            onSwipeRightActionChange = {},
+            onSwipeUpActionChange = {},
+            onSwipeDownActionChange = {},
+            onDefaultBehaviorNoticeEnabledChange = {},
+            selectedLanguageTag = SettingsRepository.SYSTEM_LANGUAGE_TAG,
+            onLanguageTagChange = {},
+            onSwipeAction = { _, _ -> true },
+            onManualUpdateCheck = {},
+            onClearUpdateFeedback = {},
+            onDismissAvailableUpdate = {},
+            onDeferCurrentUpdate = {},
+            onStartUpdateInstallation = {},
+            showPermissionRationale = false,
+        )
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFFF4F1EA)
+@Composable
+private fun MainScreenPermissionPreview() {
+    MaterialTheme {
+        val previewSnackbarHostState = remember { SnackbarHostState() }
+        MainScreenContent(
+            state = HomeUiState.PermissionDenied,
+            permissionMode = PermissionHelper.PermissionMode.DENIED,
+            isSwipeDeleteEnabled = false,
+            isDeleteReminderEnabled = SettingsRepository.DEFAULT_DELETE_REMINDER_ENABLED,
+            swipeGestureSensitivity = SettingsRepository.DEFAULT_SWIPE_GESTURE_SENSITIVITY,
+            showFullImage = false,
+            isTapImageToggleEnabled = SettingsRepository.DEFAULT_TAP_IMAGE_TOGGLE_ENABLED,
+            showFloatingDeleteButton = false,
+            isGestureBallEnabled = false,
+            gestureBallSizeScale = SettingsRepository.DEFAULT_GESTURE_BALL_SIZE_SCALE,
+            isGestureBallFeedbackEnabled = SettingsRepository.DEFAULT_GESTURE_BALL_FEEDBACK_ENABLED,
+            showGestureBallActionHint = SettingsRepository.DEFAULT_GESTURE_BALL_ACTION_HINT_ENABLED,
+            isSilentDeleteEnabled = false,
+            silentDeleteDcimLabel = null,
+            silentDeletePicturesLabel = null,
+            hasDcimDirectoryAuthorized = false,
+            hasPicturesDirectoryAuthorized = false,
+            swipeLeftAction = PREVIEW_DEFAULT_LEFT_ACTION,
+            swipeRightAction = PREVIEW_DEFAULT_RIGHT_ACTION,
+            swipeUpAction = PREVIEW_DEFAULT_UP_ACTION,
+            swipeDownAction = PREVIEW_DEFAULT_DOWN_ACTION,
+            defaultBehaviorNoticeMode = DefaultBehaviorNoticeMode.Visible,
+            shouldShowDefaultBehaviorNotice = true,
+            availableUpdateRelease = null,
+            updateCheckFeedback = UpdateCheckFeedback.Idle,
+            isUpdateInstallInProgress = false,
+            snackbarHostState = previewSnackbarHostState,
+            onRequestPermission = {},
+            onOpenSettings = {},
+            onPermissionRationaleDismissed = {},
+            onRefresh = {},
+            onSwipeDeleteEnabledChange = {},
+            onDeleteReminderEnabledChange = {},
+            onSwipeGestureSensitivityChange = {},
+            onShowFullImageChange = {},
+            onTapImageToggleEnabledChange = {},
+            onShowFloatingDeleteButtonChange = {},
+            onGestureBallEnabledChange = {},
+            onGestureBallSizeScaleChange = {},
+            onGestureBallFeedbackEnabledChange = {},
+            onShowGestureBallActionHintChange = {},
+            onSilentDeleteEnabledChange = {},
+            onConfigureSilentDeleteDcimDirectory = {},
+            onConfigureSilentDeletePicturesDirectory = {},
+            onSwipeLeftActionChange = {},
+            onSwipeRightActionChange = {},
+            onSwipeUpActionChange = {},
+            onSwipeDownActionChange = {},
+            onDefaultBehaviorNoticeEnabledChange = {},
+            selectedLanguageTag = SettingsRepository.SYSTEM_LANGUAGE_TAG,
+            onLanguageTagChange = {},
+            onSwipeAction = { _, _ -> true },
+            onManualUpdateCheck = {},
+            onClearUpdateFeedback = {},
+            onDismissAvailableUpdate = {},
+            onDeferCurrentUpdate = {},
+            onStartUpdateInstallation = {},
+            showPermissionRationale = true,
+        )
+    }
+}
