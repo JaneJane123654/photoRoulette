@@ -1,10 +1,15 @@
 package com.example.photoroulette.ui.screens
 
+import android.content.ActivityNotFoundException
+import android.content.ClipData
+import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color as AndroidColor
 import android.net.Uri
 import android.view.HapticFeedbackConstants
 import android.view.SoundEffectConstants
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
@@ -44,17 +49,22 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Security
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -160,6 +170,7 @@ internal fun PhotoDeck(
     val context = LocalContext.current
     val density = LocalDensity.current
     val playerPool = remember(context) { DeckPlayerPool(context) }
+    var isCardActionsSheetVisible by rememberSaveable { mutableStateOf(false) }
     var topCardDragProgress by remember { mutableFloatStateOf(0f) }
     var topCardDownCoverProgress by remember { mutableFloatStateOf(0f) }
     var topCardRightCoverProgress by remember { mutableFloatStateOf(0f) }
@@ -194,6 +205,7 @@ internal fun PhotoDeck(
     }
 
     LaunchedEffect(visibleCards.firstOrNull()?.id) {
+        isCardActionsSheetVisible = false
         topCardDragProgress = 0f
         topCardDownCoverProgress = 0f
         topCardRightCoverProgress = 0f
@@ -280,7 +292,10 @@ internal fun PhotoDeck(
                                 vertical = verticalInset,
                             )
                             .zIndex(cardZIndex),
-                        enabled = isTopCard && !isTopCardImageGestureLocked,
+                        enabled =
+                            isTopCard &&
+                                !isTopCardImageGestureLocked &&
+                                !isCardActionsSheetVisible,
                         gestureSensitivity = swipeGestureSensitivity,
                         canSwipeLeft = isTopCard && canSwipeForAction(
                             action = swipeLeftAction,
@@ -345,24 +360,52 @@ internal fun PhotoDeck(
                         },
                         shape = RoundedCornerShape(28.dp),
                     ) {
-                        MediaCardContent(
-                            card = card,
-                            isTopCard = isTopCard,
-                            playerPool = playerPool,
-                            showFullImage = if (isTopCard) topCardShowFullImage else showFullImage,
-                            enableTwoFingerTransform = isTopCard,
-                            enableTapToggle = isTapImageToggleEnabled,
-                            onGestureLockChanged = if (isTopCard) {
-                                { isTopCardImageGestureLocked = it }
-                            } else {
-                                {}
-                            },
-                            onTapWhenIdle = if (isTopCard) {
-                                { isTopCardForceFullImage = !isTopCardForceFullImage }
-                            } else {
-                                {}
-                            },
-                        )
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            MediaCardContent(
+                                card = card,
+                                isTopCard = isTopCard,
+                                playerPool = playerPool,
+                                showFullImage = if (isTopCard) topCardShowFullImage else showFullImage,
+                                enableTwoFingerTransform = isTopCard,
+                                enableTapToggle = isTapImageToggleEnabled,
+                                onGestureLockChanged = if (isTopCard) {
+                                    { isTopCardImageGestureLocked = it }
+                                } else {
+                                    {}
+                                },
+                                onTapWhenIdle = if (isTopCard) {
+                                    { isTopCardForceFullImage = !isTopCardForceFullImage }
+                                } else {
+                                    {}
+                                },
+                            )
+
+                            if (isTopCard) {
+                                IconButton(
+                                    onClick = { isCardActionsSheetVisible = true },
+                                    enabled = !isCardActionsSheetVisible,
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(CARD_ACTION_BUTTON_PADDING)
+                                        .size(CARD_ACTION_BUTTON_SIZE)
+                                        .background(
+                                            color =
+                                                MaterialTheme.colorScheme.surface.copy(
+                                                    alpha = CARD_ACTION_BUTTON_BACKGROUND_ALPHA,
+                                                ),
+                                            shape = CircleShape,
+                                        ),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.MoreVert,
+                                        contentDescription =
+                                            stringResource(
+                                                R.string.card_actions_open_content_description,
+                                            ),
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -410,6 +453,23 @@ internal fun PhotoDeck(
                     }
                 }
             }
+        }
+
+        if (isCardActionsSheetVisible && topCard != null) {
+            CardActionsBottomSheet(
+                onDismissRequest = { isCardActionsSheetVisible = false },
+                onShareClick = {
+                    isCardActionsSheetVisible = false
+                    val didOpenShareSheet = launchMediaShareSheet(context, topCard)
+                    if (!didOpenShareSheet) {
+                        Toast.makeText(
+                            context,
+                            R.string.share_media_failed_toast,
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
+                },
+            )
         }
     }
 }
@@ -464,5 +524,105 @@ internal fun MediaCardContent(
         }
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CardActionsBottomSheet(
+    onDismissRequest: () -> Unit,
+    onShareClick: () -> Unit,
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.card_actions_sheet_title),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                text = stringResource(R.string.card_actions_sheet_description),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            FilledTonalButton(
+                onClick = onShareClick,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Share,
+                        contentDescription = null,
+                    )
+                    Text(text = stringResource(R.string.card_actions_share))
+                }
+            }
+
+            HorizontalDivider()
+
+            TextButton(
+                onClick = onDismissRequest,
+                modifier = Modifier.align(Alignment.End),
+            ) {
+                Text(text = stringResource(android.R.string.cancel))
+            }
+        }
+    }
+}
+
+private fun launchMediaShareSheet(context: Context, card: MediaCard): Boolean {
+    val mediaUri = card.playbackUri ?: card.previewUri
+    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+        type = resolveShareMimeType(card)
+        putExtra(Intent.EXTRA_STREAM, mediaUri)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        clipData = ClipData.newUri(context.contentResolver, SHARE_CLIP_LABEL, mediaUri)
+    }
+    val chooserIntent = Intent.createChooser(
+        shareIntent,
+        context.getString(R.string.share_media_chooser_title),
+    ).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+
+    return try {
+        context.startActivity(chooserIntent)
+        true
+    } catch (_: ActivityNotFoundException) {
+        false
+    } catch (_: SecurityException) {
+        false
+    }
+}
+
+private fun resolveShareMimeType(card: MediaCard): String {
+    val normalizedMimeType = card.mimeType.trim().lowercase()
+    if (normalizedMimeType.contains("/") && normalizedMimeType != "application/octet-stream") {
+        return normalizedMimeType
+    }
+
+    return when (card.kind) {
+        MediaKind.Image,
+        MediaKind.AnimatedImage,
+        -> "image/*"
+
+        MediaKind.Video,
+        MediaKind.LivePhoto,
+        -> "video/*"
+    }
+}
+
+private const val SHARE_CLIP_LABEL = "photo-roulette-share"
+private val CARD_ACTION_BUTTON_PADDING = 12.dp
+private val CARD_ACTION_BUTTON_SIZE = 38.dp
+private const val CARD_ACTION_BUTTON_BACKGROUND_ALPHA = 0.72f
 
 

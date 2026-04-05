@@ -15,6 +15,12 @@
     <string name="home_header_description">支持单手手势随机浏览。点击下方“设置”即可自定义各项行为。</string>
     <string name="refresh_button_content_description">重新打乱照片卡组</string>
     <string name="refresh_button_label">重新打乱</string>
+    <string name="card_actions_open_content_description">打开媒体操作</string>
+    <string name="card_actions_sheet_title">媒体操作</string>
+    <string name="card_actions_sheet_description">通过 Android 系统分享，可发送到微信、QQ、X（推特）等应用。</string>
+    <string name="card_actions_share">分享</string>
+    <string name="share_media_chooser_title">分享这张精彩瞬间</string>
+    <string name="share_media_failed_toast">当前没有可用的分享应用</string>
     <string name="settings_entry_title">设置</string>
     <string name="settings_entry_description">自定义手势、删除方式、图片展示与语言。</string>
     <string name="settings_entry_open">打开</string>

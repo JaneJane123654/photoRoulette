@@ -15,6 +15,12 @@
     <string name="home_header_description">Randomly browse your gallery with one-handed gestures. Open Settings below to customize behavior.</string>
     <string name="refresh_button_content_description">Reshuffle your photo deck</string>
     <string name="refresh_button_label">Reshuffle</string>
+    <string name="card_actions_open_content_description">Open media actions</string>
+    <string name="card_actions_sheet_title">Media actions</string>
+    <string name="card_actions_sheet_description">Share this item to WeChat, QQ, X, and other apps through Android system share.</string>
+    <string name="card_actions_share">Share</string>
+    <string name="share_media_chooser_title">Share this moment</string>
+    <string name="share_media_failed_toast">No app is currently available for sharing.</string>
     <string name="settings_entry_title">Settings</string>
     <string name="settings_entry_description">Customize gestures, delete behavior, display style, and language.</string>
     <string name="settings_entry_open">Open</string>
