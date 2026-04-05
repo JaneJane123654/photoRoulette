@@ -37,7 +37,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -81,10 +80,6 @@ fun SwipeableCard(
 ) {
     val scope = rememberCoroutineScope()
     val hostView = LocalView.current
-    val density = LocalDensity.current
-    val exclusionStripWidthPx = remember(density) {
-        with(density) { SYSTEM_GESTURE_EXCLUSION_EDGE_WIDTH.toPx() }
-    }
 
     val currentOnSwiped by rememberUpdatedState(onSwiped)
     val currentOnDragProgressChanged by rememberUpdatedState(onDragProgressChanged)
@@ -183,18 +178,15 @@ fun SwipeableCard(
                     return@onGloballyPositioned
                 }
 
-                val left = bounds.left.toInt()
                 val top = bounds.top.toInt()
-                val right = bounds.right.toInt()
                 val bottom = bounds.bottom.toInt()
-                val stripWidth = exclusionStripWidthPx.toInt().coerceAtLeast(1)
-                val leftStripRight = (left + stripWidth).coerceAtMost(right)
-                val rightStripLeft = (right - stripWidth).coerceAtLeast(left)
+                val rootWidth = hostView.width.coerceAtLeast(bounds.right.toInt()).coerceAtLeast(1)
 
                 gestureExclusionRects = listOf(
-                    Rect(left, top, leftStripRight, bottom),
-                    Rect(rightStripLeft, top, right, bottom),
-                )
+                    Rect(0, top, rootWidth, bottom),
+                ).filter { rect ->
+                    rect.right > rect.left && rect.bottom > rect.top
+                }
             }
             .graphicsLayer {
                 translationX = if (enabled) offsetX else 0f
@@ -745,7 +737,6 @@ private fun calculateDragProgress(
     return (distance / dismissDistance).coerceIn(0f, 1f)
 }
 
-private val SYSTEM_GESTURE_EXCLUSION_EDGE_WIDTH = 24.dp
 private const val HORIZONTAL_DISMISS_THRESHOLD_FRACTION = 0.22f
 private const val VERTICAL_DISMISS_THRESHOLD_FRACTION = 0.22f
 private const val SWIPE_OUT_DISTANCE_MULTIPLIER = 1.38f

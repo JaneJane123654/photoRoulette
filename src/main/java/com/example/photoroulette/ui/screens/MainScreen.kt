@@ -89,6 +89,7 @@ import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -2778,7 +2779,7 @@ private fun PhotoDeck(
             modifier = Modifier.size(
                 width = deckWidth,
                 height = deckHeight,
-            ),
+            ).clipToBounds(),
             contentAlignment = Alignment.Center,
         ) {
             val topCardShowFullImage = showFullImage || isTopCardForceFullImage
@@ -2807,18 +2808,6 @@ private fun PhotoDeck(
                             .padding(
                                 horizontal = horizontalInset,
                                 vertical = verticalInset,
-                            )
-                            .then(
-                                if (isTopCard && clampedTopCardDownCoverProgress > 0f) {
-                                    Modifier.graphicsLayer {
-                                        val scale =
-                                            1f - (clampedTopCardDownCoverProgress * TOP_CARD_DOWN_PULL_SCALE_REDUCTION)
-                                        scaleX = scale
-                                        scaleY = scale
-                                    }
-                                } else {
-                                    Modifier
-                                },
                             )
                             .zIndex(cardZIndex),
                         enabled = isTopCard && !isTopCardImageGestureLocked,
@@ -2895,7 +2884,10 @@ private fun PhotoDeck(
                 }
             }
 
-            if (shouldUsePreviousCardTopCover) {
+            if (
+                shouldUsePreviousCardTopCover &&
+                    clampedTopCardDownCoverProgress > DOWN_SWIPE_COVER_VISIBILITY_EPSILON
+            ) {
                 val coverCard = previousCard
                 key("cover-${coverCard.id}") {
                     SwipeableCard(
@@ -3798,7 +3790,7 @@ private fun canSwipeForAction(
 
 private const val CARD_ASPECT_RATIO = 0.72f
 private const val BACK_CARD_REVEAL_MULTIPLIER = 0.72f
-private const val TOP_CARD_DOWN_PULL_SCALE_REDUCTION = 0.05f
+private const val DOWN_SWIPE_COVER_VISIBILITY_EPSILON = 0.001f
 private const val MIN_PHOTO_GESTURE_SCALE = 1f
 private const val MAX_PHOTO_GESTURE_SCALE = 4f
 private const val PHOTO_GESTURE_EPSILON = 0.0001f

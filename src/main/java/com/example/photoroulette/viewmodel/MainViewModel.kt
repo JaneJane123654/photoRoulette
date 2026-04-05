@@ -18,6 +18,7 @@ import com.example.photoroulette.BuildConfig
 import com.example.photoroulette.data.datastore.SettingsRepository
 import com.example.photoroulette.data.media.MediaRepository
 import com.example.photoroulette.model.MediaCard
+import com.example.photoroulette.model.MediaKind
 import com.example.photoroulette.data.update.AppUpdateRepository
 import com.example.photoroulette.model.AppReleaseInfo
 import com.example.photoroulette.model.DefaultBehaviorNoticeMode
@@ -534,11 +535,7 @@ class MainViewModel(
 
         scope.launch {
             val application = getApplication<Application>()
-            val mediaUri = mediaCardCache[imageId]?.previewUri
-                ?: IntentHelper.buildMediaUri(
-                    mediaId = imageId,
-                    collectionUri = MediaStore.Files.getContentUri(EXTERNAL_MEDIA_VOLUME),
-                )
+            val mediaUri = resolveDeleteUri(imageId)
 
             val result = withContext(ioDispatcher) {
                 val silentDeleteRequest = buildSilentDeleteRequest(imageId)
@@ -1083,9 +1080,21 @@ class MainViewModel(
             return
         }
 
+        if (queueIds.isEmpty()) {
+            return
+        }
+
+        val preloadStartIndex = (currentIndex - PRELOAD_BEHIND_COUNT).coerceAtLeast(0)
+        val preloadEndExclusive = (
+            currentIndex + HomeUiState.MAX_VISIBLE_CARD_COUNT + PRELOAD_AHEAD_COUNT
+        ).coerceAtMost(queueIds.size)
+
+        if (preloadStartIndex >= preloadEndExclusive) {
+            return
+        }
+
         val preloadCards = queueIds
-            .drop(currentIndex + HomeUiState.MAX_VISIBLE_CARD_COUNT)
-            .take(PRELOAD_AHEAD_COUNT)
+            .subList(preloadStartIndex, preloadEndExclusive)
             .mapNotNull { id -> mediaCardCache[id] }
 
         preloadCards.forEach { card ->
@@ -1343,6 +1352,24 @@ class MainViewModel(
         else -> PermissionHelper.PermissionMode.DENIED
     }
 
+    private fun resolveDeleteUri(imageId: Long): Uri {
+        val card = mediaCardCache[imageId]
+        val collectionUri = when (card?.kind) {
+            MediaKind.Video,
+            MediaKind.LivePhoto,
+            -> MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+            MediaKind.Image,
+            MediaKind.AnimatedImage,
+            -> MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+            null -> MediaStore.Files.getContentUri(EXTERNAL_MEDIA_VOLUME)
+        }
+
+        return IntentHelper.buildMediaUri(
+            mediaId = imageId,
+            collectionUri = collectionUri,
+        )
+    }
+
     private companion object {
         const val EXTERNAL_MEDIA_VOLUME = "external"
         const val KEY_QUEUE_IDS = "queue_ids"
@@ -1370,6 +1397,7 @@ class MainViewModel(
         const val KEY_SHOULD_SHOW_DEFAULT_BEHAVIOR_NOTICE = "should_show_default_behavior_notice"
         const val KEY_HAS_PREPARED_DEFAULT_BEHAVIOR_NOTICE = "has_prepared_default_behavior_notice"
         const val KEY_SKIPPED_UPDATE_VERSION = "skipped_update_version"
+        const val PRELOAD_BEHIND_COUNT = 3
         const val PRELOAD_AHEAD_COUNT = 6
         const val DEFAULT_BEHAVIOR_NOTICE_MONTHLY_MAX_SHOWN = 5
     }
