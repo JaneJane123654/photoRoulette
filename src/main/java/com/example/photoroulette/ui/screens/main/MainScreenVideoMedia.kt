@@ -165,15 +165,12 @@ internal fun VideoCardContent(
     val previewRequest = remember(context, card.id, card.previewUri) {
         ImageRequest.Builder(context)
             .data(card.previewUri)
-            .crossfade(true)
+            .crossfade(false)
             .videoFrameMillis(0)
             .bitmapConfig(Bitmap.Config.RGB_565)
             .build()
     }
 
-    val placeholderPainter = ColorPainter(
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.24f),
-    )
     val transparentPainter = remember { ColorPainter(Color.Transparent) }
 
     LaunchedEffect(Unit) {
@@ -347,7 +344,7 @@ internal fun VideoCardContent(
                 contentDescription = stringResource(id = R.string.photo_content_description),
                 modifier = Modifier.matchParentSize(),
                 contentScale = if (showFullImage) ContentScale.Fit else ContentScale.Crop,
-                placeholder = placeholderPainter,
+                placeholder = transparentPainter,
                 error = transparentPainter,
                 fallback = transparentPainter,
                 onLoading = {
@@ -370,9 +367,9 @@ internal fun VideoCardContent(
             )
         }
 
-        if (visualState != PhotoVisualState.Ready) {
+        if (visualState == PhotoVisualState.Error) {
             PhotoFallbackContent(
-                isError = visualState == PhotoVisualState.Error,
+                isError = true,
                 modifier = Modifier.align(Alignment.Center),
             )
         }

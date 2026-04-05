@@ -230,8 +230,20 @@ internal fun PhotoDeck(
         val deckHeightPx = with(density) { deckHeight.toPx() }
         val clampedTopCardDownCoverProgress = topCardDownCoverProgress.coerceIn(0f, 1f)
         val clampedTopCardRightCoverProgress = topCardRightCoverProgress.coerceIn(0f, 1f)
-        val previousCoverTranslationY = -deckHeightPx * (1f - clampedTopCardDownCoverProgress)
-        val previousCoverTranslationX = -deckWidthPx * (1f - clampedTopCardRightCoverProgress)
+        val previousCoverInitialOffsetY = when (previousTopCoverTriggerDirection) {
+            SwipeDirection.Up -> deckHeightPx
+            SwipeDirection.Down -> -deckHeightPx
+            else -> -deckHeightPx
+        }
+        val previousCoverInitialOffsetX = when (previousRightCoverTriggerDirection) {
+            SwipeDirection.Left -> deckWidthPx
+            SwipeDirection.Right -> -deckWidthPx
+            else -> -deckWidthPx
+        }
+        val previousCoverTranslationY =
+            previousCoverInitialOffsetY * (1f - clampedTopCardDownCoverProgress)
+        val previousCoverTranslationX =
+            previousCoverInitialOffsetX * (1f - clampedTopCardRightCoverProgress)
 
         Box(
             modifier = Modifier.size(

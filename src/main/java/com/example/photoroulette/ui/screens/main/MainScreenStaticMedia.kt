@@ -155,7 +155,7 @@ internal fun StaticPhotoCardImage(
     val request = remember(context, card.id, card.previewUri) {
         ImageRequest.Builder(context)
             .data(card.previewUri)
-            .crossfade(true)
+            .crossfade(false)
             .bitmapConfig(Bitmap.Config.RGB_565)
             .build()
     }
@@ -168,9 +168,6 @@ internal fun StaticPhotoCardImage(
     var resetTransformJob by remember(card.id) { mutableStateOf<Job?>(null) }
     val currentOnGestureLockChanged by rememberUpdatedState(onGestureLockChanged)
     val currentOnTapWhenIdle by rememberUpdatedState(onTapWhenIdle)
-    val placeholderPainter = ColorPainter(
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.24f),
-    )
     val transparentPainter = remember { ColorPainter(Color.Transparent) }
 
     fun clampImageOffset(target: Offset, scale: Float): Offset {
@@ -423,9 +420,9 @@ internal fun StaticPhotoCardImage(
                 )
             },
     ) {
-        if (visualState != PhotoVisualState.Ready) {
+        if (visualState == PhotoVisualState.Error) {
             PhotoFallbackContent(
-                isError = visualState == PhotoVisualState.Error,
+                isError = true,
                 modifier = Modifier.align(Alignment.Center),
             )
         }
@@ -442,7 +439,7 @@ internal fun StaticPhotoCardImage(
                     translationY = imageOffset.y
                 },
             contentScale = if (showFullImage) ContentScale.Fit else ContentScale.Crop,
-            placeholder = placeholderPainter,
+            placeholder = transparentPainter,
             error = transparentPainter,
             fallback = transparentPainter,
             onLoading = { visualState = PhotoVisualState.Loading },

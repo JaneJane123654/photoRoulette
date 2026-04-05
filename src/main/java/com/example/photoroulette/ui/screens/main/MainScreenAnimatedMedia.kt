@@ -150,18 +150,15 @@ internal fun AnimatedPhotoCardImage(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    var useReducedDecode by remember(card.id) { mutableStateOf(false) }
+    var useReducedDecode by remember(card.id) { mutableStateOf(true) }
     var visualState by remember(card.id) { mutableStateOf(PhotoVisualState.Loading) }
     val currentOnTapWhenIdle by rememberUpdatedState(onTapWhenIdle)
-    val placeholderPainter = ColorPainter(
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.24f),
-    )
     val transparentPainter = remember { ColorPainter(Color.Transparent) }
 
     val request = remember(context, card.id, card.previewUri, useReducedDecode) {
         ImageRequest.Builder(context)
             .data(card.previewUri)
-            .crossfade(true)
+            .crossfade(false)
             .bitmapConfig(Bitmap.Config.RGB_565)
             .apply {
                 if (useReducedDecode) {
@@ -187,9 +184,9 @@ internal fun AnimatedPhotoCardImage(
                 ),
             ),
     ) {
-        if (visualState != PhotoVisualState.Ready) {
+        if (visualState == PhotoVisualState.Error) {
             PhotoFallbackContent(
-                isError = visualState == PhotoVisualState.Error,
+                isError = true,
                 modifier = Modifier.align(Alignment.Center),
             )
         }
@@ -207,7 +204,7 @@ internal fun AnimatedPhotoCardImage(
                     },
                 ),
             contentScale = if (showFullImage) ContentScale.Fit else ContentScale.Crop,
-            placeholder = placeholderPainter,
+            placeholder = transparentPainter,
             error = transparentPainter,
             fallback = transparentPainter,
             onLoading = { visualState = PhotoVisualState.Loading },

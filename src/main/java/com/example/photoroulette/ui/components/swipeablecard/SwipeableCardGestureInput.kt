@@ -28,7 +28,9 @@ internal fun Modifier.swipeableCardPointerInputModifier(
     canSwipeUp: Boolean,
     canSwipeDown: Boolean,
     isDownSwipeCoverEnabled: Boolean,
+    downSwipeCoverTriggerDirection: SwipeDirection,
     isRightSwipeCoverEnabled: Boolean,
+    rightSwipeCoverTriggerDirection: SwipeDirection,
     scope: CoroutineScope,
     hostView: android.view.View,
     currentOnSwiped: (SwipeDirection) -> Boolean,
@@ -37,7 +39,9 @@ internal fun Modifier.swipeableCardPointerInputModifier(
     currentCanSwipeUp: Boolean,
     currentCanSwipeDown: Boolean,
     currentIsDownSwipeCoverEnabled: Boolean,
+    currentDownSwipeCoverTriggerDirection: SwipeDirection,
     currentIsRightSwipeCoverEnabled: Boolean,
+    currentRightSwipeCoverTriggerDirection: SwipeDirection,
     currentGestureSensitivity: Float,
     offsetXState: MutableFloatState,
     offsetYState: MutableFloatState,
@@ -58,7 +62,9 @@ internal fun Modifier.swipeableCardPointerInputModifier(
         canSwipeUp,
         canSwipeDown,
         isDownSwipeCoverEnabled,
+        downSwipeCoverTriggerDirection,
         isRightSwipeCoverEnabled,
+        rightSwipeCoverTriggerDirection,
     ) {
         var offsetX by offsetXState
         var offsetY by offsetYState
@@ -74,6 +80,38 @@ internal fun Modifier.swipeableCardPointerInputModifier(
         }
         fun reportRightSwipeCoverProgress(progress: Float, force: Boolean = false) {
             reportRightSwipeCoverProgressCallback(progress, force)
+        }
+        fun isSwipeDirectionEnabled(direction: SwipeDirection): Boolean {
+            return when (direction) {
+                SwipeDirection.Left -> currentCanSwipeLeft
+                SwipeDirection.Right -> currentCanSwipeRight
+                SwipeDirection.Up -> currentCanSwipeUp
+                SwipeDirection.Down -> currentCanSwipeDown
+            }
+        }
+        fun isCoverDragStartForDirection(
+            delta: Offset,
+            direction: SwipeDirection,
+        ): Boolean {
+            val absX = abs(delta.x)
+            val absY = abs(delta.y)
+            return when (direction) {
+                SwipeDirection.Left -> delta.x < 0f && absX >= absY
+                SwipeDirection.Right -> delta.x > 0f && absX >= absY
+                SwipeDirection.Up -> delta.y < 0f && absY >= absX
+                SwipeDirection.Down -> delta.y > 0f && absY >= absX
+            }
+        }
+        fun axisMagnitudeForDirection(
+            delta: Offset,
+            direction: SwipeDirection,
+        ): Float {
+            return when (direction) {
+                SwipeDirection.Left -> -delta.x
+                SwipeDirection.Right -> delta.x
+                SwipeDirection.Up -> -delta.y
+                SwipeDirection.Down -> delta.y
+            }
         }
                         awaitEachGesture {
                             val down = awaitFirstDown(requireUnconsumed = false)
@@ -111,17 +149,33 @@ internal fun Modifier.swipeableCardPointerInputModifier(
                                     )
                                     null -> rawDelta
                                 }
+                                val downCoverDelta = axisMagnitudeForDirection(
+                                    delta = normalizedDelta,
+                                    direction = currentDownSwipeCoverTriggerDirection,
+                                )
                                 val canDriveDownSwipeCover =
-                                    currentIsDownSwipeCoverEnabled && currentCanSwipeDown
+                                    currentIsDownSwipeCoverEnabled &&
+                                        isSwipeDirectionEnabled(currentDownSwipeCoverTriggerDirection)
                                 val shouldStartDownSwipeCover =
-                                    normalizedDelta.y > 0f && abs(normalizedDelta.y) >= abs(normalizedDelta.x)
+                                    isCoverDragStartForDirection(
+                                        delta = normalizedDelta,
+                                        direction = currentDownSwipeCoverTriggerDirection,
+                                    )
                                 val maxCoverOffset =
                                     cardSize.height.toFloat().coerceAtLeast(1f) *
                                         DOWN_SWIPE_COVER_MAX_PULL_MULTIPLIER
+                                val rightCoverDelta = axisMagnitudeForDirection(
+                                    delta = normalizedDelta,
+                                    direction = currentRightSwipeCoverTriggerDirection,
+                                )
                                 val canDriveRightSwipeCover =
-                                    currentIsRightSwipeCoverEnabled && currentCanSwipeRight
+                                    currentIsRightSwipeCoverEnabled &&
+                                        isSwipeDirectionEnabled(currentRightSwipeCoverTriggerDirection)
                                 val shouldStartRightSwipeCover =
-                                    normalizedDelta.x > 0f && abs(normalizedDelta.x) >= abs(normalizedDelta.y)
+                                    isCoverDragStartForDirection(
+                                        delta = normalizedDelta,
+                                        direction = currentRightSwipeCoverTriggerDirection,
+                                    )
                                 val maxRightCoverOffset =
                                     cardSize.width.toFloat().coerceAtLeast(1f) *
                                         RIGHT_SWIPE_COVER_MAX_PULL_MULTIPLIER
@@ -131,7 +185,7 @@ internal fun Modifier.swipeableCardPointerInputModifier(
                                         (rightSwipeCoverOffsetX == 0f && shouldStartDownSwipeCover))
                                 ) {
                                     downSwipeCoverOffsetY =
-                                        (downSwipeCoverOffsetY + normalizedDelta.y)
+                                        (downSwipeCoverOffsetY + downCoverDelta)
                                             .coerceIn(0f, maxCoverOffset)
                                     hasDraggedCard = true
                                     if (rightSwipeCoverOffsetX != 0f) {
@@ -158,7 +212,7 @@ internal fun Modifier.swipeableCardPointerInputModifier(
                                         (downSwipeCoverOffsetY == 0f && shouldStartRightSwipeCover))
                                 ) {
                                     rightSwipeCoverOffsetX =
-                                        (rightSwipeCoverOffsetX + normalizedDelta.x)
+                                        (rightSwipeCoverOffsetX + rightCoverDelta)
                                             .coerceIn(0f, maxRightCoverOffset)
                                     hasDraggedCard = true
                                     if (downSwipeCoverOffsetY != 0f) {
@@ -279,7 +333,7 @@ internal fun Modifier.swipeableCardPointerInputModifier(
                                     .coerceAtLeast(1f) * RIGHT_SWIPE_COVER_CONFIRM_FRACTION
                                 if (
                                     currentIsDownSwipeCoverEnabled &&
-                                        currentCanSwipeDown &&
+                                        isSwipeDirectionEnabled(currentDownSwipeCoverTriggerDirection) &&
                                         downSwipeCoverOffsetY > 0f
                                 ) {
                                     val shouldConfirmDownSwipeCover =
@@ -298,7 +352,9 @@ internal fun Modifier.swipeableCardPointerInputModifier(
                                                 ),
                                             )
                                         }
-                                        val handled = currentOnSwiped(SwipeDirection.Down)
+                                        val handled = currentOnSwiped(
+                                            currentDownSwipeCoverTriggerDirection,
+                                        )
                                         if (!handled) {
                                             animateValueTo(
                                                 startValue = downSwipeCoverOffsetY,
@@ -336,7 +392,7 @@ internal fun Modifier.swipeableCardPointerInputModifier(
                                 }
                                 if (
                                     currentIsRightSwipeCoverEnabled &&
-                                        currentCanSwipeRight &&
+                                        isSwipeDirectionEnabled(currentRightSwipeCoverTriggerDirection) &&
                                         rightSwipeCoverOffsetX > 0f
                                 ) {
                                     val shouldConfirmRightSwipeCover =
@@ -355,7 +411,9 @@ internal fun Modifier.swipeableCardPointerInputModifier(
                                                 ),
                                             )
                                         }
-                                        val handled = currentOnSwiped(SwipeDirection.Right)
+                                        val handled = currentOnSwiped(
+                                            currentRightSwipeCoverTriggerDirection,
+                                        )
                                         if (!handled) {
                                             animateValueTo(
                                                 startValue = rightSwipeCoverOffsetX,

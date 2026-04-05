@@ -206,8 +206,10 @@ internal enum class PhotoVisualState {
 internal class DeckPlayerPool(context: android.content.Context) {
     private val appContext = context.applicationContext
 
-    val activePlayer: ExoPlayer = buildPlayer(looping = true)
-    private val warmupPlayer: ExoPlayer = buildPlayer(looping = false)
+    private var internalActivePlayer by mutableStateOf(buildPlayer(looping = true))
+    private var internalWarmupPlayer: ExoPlayer = buildPlayer(looping = false)
+    val activePlayer: ExoPlayer
+        get() = internalActivePlayer
 
     private var activeUri: Uri? = null
     private var warmupUri: Uri? = null
@@ -217,28 +219,31 @@ internal class DeckPlayerPool(context: android.content.Context) {
         autoPlay: Boolean,
     ) {
         if (activeUri == uri) {
-            activePlayer.playWhenReady = autoPlay
-            if (autoPlay) {
-                activePlayer.play()
-            } else {
-                activePlayer.pause()
-                activePlayer.seekTo(0L)
-            }
+            applyActivePlayback(autoPlay)
+            return
+        }
+
+        if (warmupUri == uri) {
+            val promotedPlayer = internalWarmupPlayer
+            val demotedPlayer = internalActivePlayer
+
+            internalActivePlayer = promotedPlayer
+            internalWarmupPlayer = demotedPlayer
+            activeUri = uri
+            warmupUri = null
+
+            applyActivePlayback(autoPlay)
+            clearPlayer(internalWarmupPlayer)
+            internalWarmupPlayer.repeatMode = Player.REPEAT_MODE_OFF
             return
         }
 
         activeUri = uri
-        activePlayer.stop()
-        activePlayer.clearMediaItems()
-        activePlayer.setMediaItem(MediaItem.fromUri(uri))
-        activePlayer.prepare()
-        activePlayer.playWhenReady = autoPlay
-        if (autoPlay) {
-            activePlayer.play()
-        } else {
-            activePlayer.pause()
-            activePlayer.seekTo(0L)
-        }
+        clearPlayer(internalActivePlayer)
+        internalActivePlayer.repeatMode = Player.REPEAT_MODE_ALL
+        internalActivePlayer.setMediaItem(MediaItem.fromUri(uri))
+        internalActivePlayer.prepare()
+        applyActivePlayback(autoPlay)
     }
 
     fun warmup(uri: Uri?) {
@@ -252,34 +257,48 @@ internal class DeckPlayerPool(context: android.content.Context) {
         }
 
         warmupUri = uri
-        warmupPlayer.stop()
-        warmupPlayer.clearMediaItems()
-        warmupPlayer.setMediaItem(MediaItem.fromUri(uri))
-        warmupPlayer.prepare()
-        warmupPlayer.playWhenReady = false
+        clearPlayer(internalWarmupPlayer)
+        internalWarmupPlayer.repeatMode = Player.REPEAT_MODE_OFF
+        internalWarmupPlayer.setMediaItem(MediaItem.fromUri(uri))
+        internalWarmupPlayer.prepare()
+        internalWarmupPlayer.playWhenReady = false
     }
 
     fun clearActive() {
         activeUri = null
-        activePlayer.playWhenReady = false
-        activePlayer.stop()
-        activePlayer.clearMediaItems()
+        internalActivePlayer.playWhenReady = false
+        clearPlayer(internalActivePlayer)
     }
 
     fun isActiveUri(uri: Uri?): Boolean = activeUri != null && activeUri == uri
 
     fun release() {
-        activePlayer.release()
-        warmupPlayer.release()
+        internalActivePlayer.release()
+        internalWarmupPlayer.release()
         activeUri = null
         warmupUri = null
     }
 
     private fun clearWarmup() {
         warmupUri = null
-        warmupPlayer.playWhenReady = false
-        warmupPlayer.stop()
-        warmupPlayer.clearMediaItems()
+        internalWarmupPlayer.playWhenReady = false
+        clearPlayer(internalWarmupPlayer)
+    }
+
+    private fun applyActivePlayback(autoPlay: Boolean) {
+        internalActivePlayer.repeatMode = Player.REPEAT_MODE_ALL
+        internalActivePlayer.playWhenReady = autoPlay
+        if (autoPlay) {
+            internalActivePlayer.play()
+        } else {
+            internalActivePlayer.pause()
+            internalActivePlayer.seekTo(0L)
+        }
+    }
+
+    private fun clearPlayer(player: ExoPlayer) {
+        player.stop()
+        player.clearMediaItems()
     }
 
     private fun buildPlayer(looping: Boolean): ExoPlayer {
