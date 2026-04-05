@@ -69,8 +69,10 @@ fun SwipeableCard(
     revealProgress: Float = 0f,
     onDragProgressChanged: (Float) -> Unit = {},
     isDownSwipeCoverEnabled: Boolean = false,
+    downSwipeCoverTriggerDirection: SwipeDirection = SwipeDirection.Down,
     onDownSwipeCoverProgressChanged: (Float) -> Unit = {},
     isRightSwipeCoverEnabled: Boolean = false,
+    rightSwipeCoverTriggerDirection: SwipeDirection = SwipeDirection.Right,
     onRightSwipeCoverProgressChanged: (Float) -> Unit = {},
     shape: Shape = RoundedCornerShape(28.dp),
     content: @Composable BoxScope.() -> Unit,
@@ -85,7 +87,9 @@ fun SwipeableCard(
     val currentCanSwipeUp by rememberUpdatedState(canSwipeUp)
     val currentCanSwipeDown by rememberUpdatedState(canSwipeDown)
     val currentIsDownSwipeCoverEnabled by rememberUpdatedState(isDownSwipeCoverEnabled)
+    val currentDownSwipeCoverTriggerDirection by rememberUpdatedState(downSwipeCoverTriggerDirection)
     val currentIsRightSwipeCoverEnabled by rememberUpdatedState(isRightSwipeCoverEnabled)
+    val currentRightSwipeCoverTriggerDirection by rememberUpdatedState(rightSwipeCoverTriggerDirection)
     val currentGestureSensitivity by rememberUpdatedState(
         gestureSensitivity.coerceIn(MIN_GESTURE_SENSITIVITY, MAX_GESTURE_SENSITIVITY),
     )
@@ -234,7 +238,9 @@ fun SwipeableCard(
                         canSwipeUp = canSwipeUp,
                         canSwipeDown = canSwipeDown,
                         isDownSwipeCoverEnabled = isDownSwipeCoverEnabled,
+                        downSwipeCoverTriggerDirection = downSwipeCoverTriggerDirection,
                         isRightSwipeCoverEnabled = isRightSwipeCoverEnabled,
+                        rightSwipeCoverTriggerDirection = rightSwipeCoverTriggerDirection,
                         scope = scope,
                         hostView = hostView,
                         currentOnSwiped = currentOnSwiped,
@@ -243,7 +249,11 @@ fun SwipeableCard(
                         currentCanSwipeUp = currentCanSwipeUp,
                         currentCanSwipeDown = currentCanSwipeDown,
                         currentIsDownSwipeCoverEnabled = currentIsDownSwipeCoverEnabled,
+                        currentDownSwipeCoverTriggerDirection =
+                            currentDownSwipeCoverTriggerDirection,
                         currentIsRightSwipeCoverEnabled = currentIsRightSwipeCoverEnabled,
+                        currentRightSwipeCoverTriggerDirection =
+                            currentRightSwipeCoverTriggerDirection,
                         currentGestureSensitivity = currentGestureSensitivity,
                         offsetXState = offsetXState,
                         offsetYState = offsetYState,

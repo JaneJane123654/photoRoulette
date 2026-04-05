@@ -166,8 +166,20 @@ internal fun PhotoDeck(
     var isTopCardForceFullImage by remember { mutableStateOf(false) }
     var isTopCardImageGestureLocked by remember { mutableStateOf(false) }
     val topCard = visibleCards.firstOrNull()
-    val shouldUsePreviousCardTopCover = swipeDownAction == SwipeAction.Previous && previousCard != null
-    val shouldUsePreviousCardRightCover = swipeRightAction == SwipeAction.Previous && previousCard != null
+    val previousTopCoverTriggerDirection = when {
+        swipeDownAction == SwipeAction.Previous -> SwipeDirection.Down
+        swipeUpAction == SwipeAction.Previous -> SwipeDirection.Up
+        else -> null
+    }
+    val previousRightCoverTriggerDirection = when {
+        swipeRightAction == SwipeAction.Previous -> SwipeDirection.Right
+        swipeLeftAction == SwipeAction.Previous -> SwipeDirection.Left
+        else -> null
+    }
+    val shouldUsePreviousCardTopCover =
+        previousTopCoverTriggerDirection != null && previousCard != null
+    val shouldUsePreviousCardRightCover =
+        previousRightCoverTriggerDirection != null && previousCard != null
     val nextVideoUri = remember(visibleCards) {
         visibleCards
             .drop(1)
@@ -301,6 +313,8 @@ internal fun PhotoDeck(
                             isTopCard &&
                                 shouldUsePreviousCardTopCover &&
                                 canSwipePrevious,
+                        downSwipeCoverTriggerDirection =
+                            previousTopCoverTriggerDirection ?: SwipeDirection.Down,
                         onDownSwipeCoverProgressChanged = if (isTopCard) {
                             { topCardDownCoverProgress = it }
                         } else {
@@ -310,6 +324,8 @@ internal fun PhotoDeck(
                             isTopCard &&
                                 shouldUsePreviousCardRightCover &&
                                 canSwipePrevious,
+                        rightSwipeCoverTriggerDirection =
+                            previousRightCoverTriggerDirection ?: SwipeDirection.Right,
                         onRightSwipeCoverProgressChanged = if (isTopCard) {
                             { topCardRightCoverProgress = it }
                         } else {
