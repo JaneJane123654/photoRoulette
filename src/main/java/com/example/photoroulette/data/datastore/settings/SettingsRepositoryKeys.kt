@@ -11,6 +11,7 @@ internal object Keys {
     val EnableDeleteReminder = booleanPreferencesKey("enable_delete_reminder")
     val EnableSilentDelete = booleanPreferencesKey("enable_silent_delete")
     val EnableTapImageToggle = booleanPreferencesKey("enable_tap_image_toggle")
+    val ShowCardActionsButton = booleanPreferencesKey("show_card_actions_button")
     val ShowFullImage = booleanPreferencesKey("show_full_image")
     val ShowFloatingDeleteButton = booleanPreferencesKey("show_floating_delete_button")
     val EnableGestureBall = booleanPreferencesKey("enable_gesture_ball")

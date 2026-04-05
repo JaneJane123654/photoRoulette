@@ -233,6 +233,52 @@ internal fun FloatingDeleteButtonControls(
 }
 
 @Composable
+internal fun CardActionsButtonControls(
+    isEnabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 18.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = stringResource(id = R.string.card_actions_button_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = if (isEnabled) {
+                        stringResource(id = R.string.card_actions_button_enabled_description)
+                    } else {
+                        stringResource(id = R.string.card_actions_button_disabled_description)
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            Switch(
+                checked = isEnabled,
+                onCheckedChange = onCheckedChange,
+            )
+        }
+    }
+}
+
+@Composable
 internal fun GestureBallControls(
     isGestureBallEnabled: Boolean,
     sizeScale: Float,

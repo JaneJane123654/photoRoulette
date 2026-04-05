@@ -146,6 +146,7 @@ internal fun SettingsDialog(
     isDeleteReminderEnabled: Boolean,
     swipeGestureSensitivity: Float,
     showFullImage: Boolean,
+    showCardActionsButton: Boolean,
     isTapImageToggleEnabled: Boolean,
     showFloatingDeleteButton: Boolean,
     isGestureBallEnabled: Boolean,
@@ -168,6 +169,7 @@ internal fun SettingsDialog(
     onDeleteReminderEnabledChange: (Boolean) -> Unit,
     onSwipeGestureSensitivityChange: (Float) -> Unit,
     onShowFullImageChange: (Boolean) -> Unit,
+    onShowCardActionsButtonChange: (Boolean) -> Unit,
     onTapImageToggleEnabledChange: (Boolean) -> Unit,
     onShowFloatingDeleteButtonChange: (Boolean) -> Unit,
     onGestureBallEnabledChange: (Boolean) -> Unit,
@@ -185,6 +187,8 @@ internal fun SettingsDialog(
     onLanguageTagChange: (String) -> Unit,
     onCheckUpdateClick: () -> Unit,
 ) {
+    var isSettingsHelpDialogVisible by rememberSaveable { mutableStateOf(false) }
+
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             modifier = Modifier.fillMaxWidth(),
@@ -230,6 +234,10 @@ internal fun SettingsDialog(
                 TapImageToggleControls(
                     isEnabled = isTapImageToggleEnabled,
                     onCheckedChange = onTapImageToggleEnabledChange,
+                )
+                CardActionsButtonControls(
+                    isEnabled = showCardActionsButton,
+                    onCheckedChange = onShowCardActionsButtonChange,
                 )
 
                 SettingsSectionTitle(text = stringResource(id = R.string.settings_section_swipe))
@@ -286,12 +294,23 @@ internal fun SettingsDialog(
                     onLanguageTagChange = onLanguageTagChange,
                 )
 
+                SettingsSectionTitle(text = stringResource(id = R.string.settings_section_help))
+                SettingsHelpEntryCard(
+                    onClick = { isSettingsHelpDialogVisible = true },
+                )
+
                 SettingsSectionTitle(text = stringResource(id = R.string.settings_section_update))
                 UpdateControls(
                     onCheckUpdateClick = onCheckUpdateClick,
                 )
             }
         }
+    }
+
+    if (isSettingsHelpDialogVisible) {
+        SettingsHelpDialog(
+            onDismiss = { isSettingsHelpDialogVisible = false },
+        )
     }
 }
 
@@ -354,6 +373,127 @@ internal fun UsageGuideCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+@Composable
+internal fun SettingsHelpEntryCard(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 18.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = stringResource(id = R.string.settings_help_entry_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = stringResource(id = R.string.settings_help_entry_description),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            OutlinedButton(onClick = onClick) {
+                Text(text = stringResource(id = R.string.settings_help_entry_open))
+            }
+        }
+    }
+}
+
+@Composable
+internal fun SettingsHelpDialog(
+    onDismiss: () -> Unit,
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surface,
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 18.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(id = R.string.settings_help_dialog_title),
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+
+                    OutlinedButton(onClick = onDismiss) {
+                        Text(text = stringResource(id = R.string.settings_dialog_done))
+                    }
+                }
+
+                Text(
+                    text = stringResource(id = R.string.settings_help_line_swipe),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = stringResource(id = R.string.settings_help_line_display),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = stringResource(id = R.string.settings_help_line_card_actions),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = stringResource(id = R.string.settings_help_line_delete),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = stringResource(id = R.string.settings_help_line_gesture_ball),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = stringResource(id = R.string.settings_help_line_silent_delete),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = stringResource(id = R.string.settings_help_line_language),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = stringResource(id = R.string.settings_help_line_update),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

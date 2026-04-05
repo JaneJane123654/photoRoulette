@@ -15,6 +15,12 @@
     <string name="home_header_description">Проведите влево или вправо, чтобы пропустить. Проведите вверх, чтобы удалить, если этот режим включён.</string>
     <string name="refresh_button_content_description">Перемешать колоду фотографий заново</string>
     <string name="refresh_button_label">Перемешать</string>
+    <string name="card_actions_open_content_description">Открыть действия с медиа</string>
+    <string name="card_actions_sheet_title">Действия с медиа</string>
+    <string name="card_actions_sheet_description">Поделитесь элементом через WeChat, QQ, X и другие приложения с помощью системного меню Android.</string>
+    <string name="card_actions_share">Поделиться</string>
+    <string name="share_media_chooser_title">Поделиться этим моментом</string>
+    <string name="share_media_failed_toast">Сейчас нет доступных приложений для отправки.</string>
 
     <string name="partial_access_icon_content_description">Включён частичный доступ к фото</string>
     <string name="partial_access_title">Просмотр выбранной части</string>
@@ -25,6 +31,10 @@
     <string name="swipe_delete_title">Смахните вверх для удаления</string>
     <string name="swipe_delete_enabled_description">Включено. Смахивание вверх по верхней карте попросит Android удалить это фото.</string>
     <string name="swipe_delete_disabled_description">Отключено для более безопасного просмотра. Смахивание вверх работает как обычный пропуск.</string>
+    <string name="delete_reminder_title">Напоминание об удалении</string>
+    <string name="delete_reminder_enabled_description">Включено. После удаления фото показывается короткое уведомление.</string>
+    <string name="delete_reminder_disabled_description">Выключено. После удаления уведомление не показывается.</string>
+    <string name="delete_reminder_toast">Фото удалено</string>
 
     <string name="default_behavior_title">Стандартные действия</string>
     <string name="default_behavior_line_up_next">Свайп вверх: следующее фото</string>
@@ -32,6 +42,8 @@
     <string name="default_behavior_line_left_delete">Свайп влево: удалить фото</string>
     <string name="default_behavior_line_delete_prerequisite">Удаление требует включения "Включить действие удаления" в настройках. Если выключено, жесты удаления становятся переходом к следующему фото.</string>
     <string name="default_behavior_line_direct_delete">Хотите удалять без подтверждения Android? Включите Тихое удаление в настройках.</string>
+    <string name="default_behavior_line_tap_toggle">Одиночное нажатие на фото: переключение режима полного отображения карточки (можно отключить в настройках).</string>
+    <string name="default_behavior_line_delete_delay">Напоминание об удалении может появляться с небольшой задержкой после свайпа влево, так как Android требуется немного времени на завершение удаления.</string>
     <string name="default_behavior_line_visibility_rule">Управление двумя пальцами: сведите/разведите пальцы, чтобы масштабировать фото, и перемещайте его двумя пальцами внутри карточки, при этом сама карточка остаётся на месте. Подсказка: эта панель автоматически скрывается после 5 показов за месяц и снова включается в следующем месяце. Если вы выключите её вручную в настройках, в следующем месяце она тоже останется выключенной.</string>
     <string name="default_behavior_collapsed_hint">Нажмите, чтобы развернуть стандартные действия</string>
     <string name="default_behavior_expand">Развернуть стандартные действия</string>
@@ -41,6 +53,12 @@
     <string name="show_full_image_title">Показывать полное изображение в карточке</string>
     <string name="show_full_image_enabled_description">Включено. Карточка показывает фото целиком, при необходимости с пустыми полями.</string>
     <string name="show_full_image_disabled_description">Выключено (по умолчанию). Карточка заполняется с обрезкой.</string>
+    <string name="card_actions_button_title">Кнопка действий в правом верхнем углу</string>
+    <string name="card_actions_button_enabled_description">Включено. На текущей карточке показывается кнопка меню с тремя точками для быстрого доступа и отправки.</string>
+    <string name="card_actions_button_disabled_description">Выключено. Кнопка меню с тремя точками на текущей карточке скрыта.</string>
+    <string name="tap_image_toggle_title">Нажатие для переключения полного изображения</string>
+    <string name="tap_image_toggle_enabled_description">Включено. Нажатие по верхнему фото переключает режим между обрезкой и полным отображением.</string>
+    <string name="tap_image_toggle_disabled_description">Выключено. Нажатие по верхнему фото не меняет режим отображения.</string>
     <string name="floating_delete_button_title">Плавающая кнопка удаления</string>
     <string name="floating_delete_button_enabled_description">Включено. Внизу справа появляется маленькая красная кнопка удаления, её можно перетаскивать после долгого нажатия.</string>
     <string name="floating_delete_button_disabled_description">По умолчанию выключено. Плавающая кнопка не показывается.</string>
@@ -48,6 +66,12 @@
     <string name="gesture_ball_enabled_description">Включено. Проведите от центра к цветному кольцу для предпросмотра действия и отпустите для выполнения. Удерживайте центр, чтобы перемещать шар.</string>
     <string name="gesture_ball_disabled_description">По умолчанию выключено. Используются только обычные свайпы карточек.</string>
     <string name="gesture_ball_size_label">Размер шара: %1$d%%</string>
+    <string name="gesture_ball_feedback_title">Звук действий шара жестов</string>
+    <string name="gesture_ball_feedback_enabled_description">Включено. При перетаскивании долгим нажатием и смене целевого действия воспроизводится обратная связь.</string>
+    <string name="gesture_ball_feedback_disabled_description">Выключено. Звуковая обратная связь шара жестов не воспроизводится.</string>
+    <string name="gesture_ball_hint_title">Подсказка действия шара жестов</string>
+    <string name="gesture_ball_hint_enabled_description">Включено. Во время перетаскивания показывается текст подсказки действия.</string>
+    <string name="gesture_ball_hint_disabled_description">Выключено. Плавающий текст подсказки действия не показывается.</string>
     <string name="gesture_ball_preview_execute">Отпустите для выполнения: %1$s</string>
     <string name="gesture_ball_preview_unavailable">Сейчас недоступно: %1$s</string>
 
@@ -65,6 +89,8 @@
 
     <string name="swipe_behavior_title">Действия свайпов</string>
     <string name="swipe_behavior_description">Выберите действие для каждого направления свайпа.</string>
+    <string name="swipe_sensitivity_label">Чувствительность свайпа: %1$d%%</string>
+    <string name="swipe_sensitivity_description">Чем выше чувствительность, тем короче движение для срабатывания; чем ниже, тем стабильнее и меньше случайных срабатываний.</string>
     <string name="swipe_direction_left">Свайп влево</string>
     <string name="swipe_direction_right">Свайп вправо</string>
     <string name="swipe_direction_up">Свайп вверх</string>
@@ -84,7 +110,21 @@
     <string name="settings_section_swipe">Жесты</string>
     <string name="settings_section_delete">Удаление</string>
     <string name="settings_section_language">Язык</string>
+    <string name="settings_section_help">Справка по настройкам</string>
     <string name="settings_section_update">Обновление</string>
+
+    <string name="settings_help_entry_title">Что делает каждый параметр</string>
+    <string name="settings_help_entry_description">Откройте краткое описание параметров жестов, отображения, удаления, языка и обновления.</string>
+    <string name="settings_help_entry_open">Смотреть</string>
+    <string name="settings_help_dialog_title">Гид по настройкам</string>
+    <string name="settings_help_line_swipe">Поведение свайпов: назначьте каждому направлению действие «предыдущая», «следующая», «удалить» или «пропустить»; чувствительность определяет расстояние для подтверждения.</string>
+    <string name="settings_help_line_display">Отображение: режим полного изображения сохраняет видимой всю фотографию, а обрезка заполняет карточку от края до края.</string>
+    <string name="settings_help_line_card_actions">Кнопка действий в правом верхнем углу: управляет показом вертикального меню с тремя точками на текущей карточке.</string>
+    <string name="settings_help_line_delete">Параметры удаления: включите жесты удаления, выберите показ напоминаний и при необходимости оставьте плавающую кнопку удаления.</string>
+    <string name="settings_help_line_gesture_ball">Шар жестов: сначала показывает предпросмотр действия, а выполняет при отпускании; можно настроить размер, звук и текст подсказки.</string>
+    <string name="settings_help_line_silent_delete">Тихое удаление: после разрешения папок DCIM и Pictures подходящие фото удаляются без диалогов подтверждения Android.</string>
+    <string name="settings_help_line_language">Язык: переключайте арабский, английский, испанский, французский, русский и китайский или используйте язык системы.</string>
+    <string name="settings_help_line_update">Обновление: проверяйте вручную, обновляйтесь сразу или откладывайте напоминания до выхода более новой версии.</string>
 
     <string name="usage_guide_title">Быстрый старт</string>
     <string name="usage_guide_line_one">1) Перемешивание: смахивайте карточки по своим настройкам; на верхней карточке используйте два пальца для масштабирования и перемещения фото внутри фиксированной рамки; либо используйте шар жестов, если он включён.</string>

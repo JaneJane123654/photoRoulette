@@ -139,6 +139,12 @@ class MainViewModel(
     )
     val showFullImage: StateFlow<Boolean> = _showFullImage.asStateFlow()
 
+    internal val _showCardActionsButton = MutableStateFlow(
+        savedStateHandle[KEY_SHOW_CARD_ACTIONS_BUTTON]
+            ?: SettingsRepository.DEFAULT_CARD_ACTIONS_BUTTON_VISIBLE,
+    )
+    val showCardActionsButton: StateFlow<Boolean> = _showCardActionsButton.asStateFlow()
+
     internal val _isTapImageToggleEnabled = MutableStateFlow(
         savedStateHandle[KEY_IS_TAP_IMAGE_TOGGLE_ENABLED]
             ?: SettingsRepository.DEFAULT_TAP_IMAGE_TOGGLE_ENABLED,
@@ -281,6 +287,7 @@ class MainViewModel(
     fun setDeleteReminderEnabled(enabled: Boolean) = setDeleteReminderEnabledImpl(enabled)
     fun setSwipeGestureSensitivity(sensitivity: Float) = setSwipeGestureSensitivityImpl(sensitivity)
     fun setShowFullImage(enabled: Boolean) = setShowFullImageImpl(enabled)
+    fun setShowCardActionsButton(enabled: Boolean) = setShowCardActionsButtonImpl(enabled)
     fun setTapImageToggleEnabled(enabled: Boolean) = setTapImageToggleEnabledImpl(enabled)
     fun setShowFloatingDeleteButton(enabled: Boolean) = setShowFloatingDeleteButtonImpl(enabled)
     fun setGestureBallEnabled(enabled: Boolean) = setGestureBallEnabledImpl(enabled)
@@ -350,6 +357,7 @@ class MainViewModel(
         const val KEY_IS_DELETE_REMINDER_ENABLED = "is_delete_reminder_enabled"
         const val KEY_SWIPE_GESTURE_SENSITIVITY = "swipe_gesture_sensitivity"
         const val KEY_SHOW_FULL_IMAGE = "show_full_image"
+        const val KEY_SHOW_CARD_ACTIONS_BUTTON = "show_card_actions_button"
         const val KEY_IS_TAP_IMAGE_TOGGLE_ENABLED = "is_tap_image_toggle_enabled"
         const val KEY_SHOW_FLOATING_DELETE_BUTTON = "show_floating_delete_button"
         const val KEY_IS_GESTURE_BALL_ENABLED = "is_gesture_ball_enabled"

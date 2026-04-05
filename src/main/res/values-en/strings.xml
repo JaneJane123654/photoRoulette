@@ -15,6 +15,12 @@
     <string name="home_header_description">Swipe in any direction to browse. You can customize what each direction does below.</string>
     <string name="refresh_button_content_description">Reshuffle your photo deck</string>
     <string name="refresh_button_label">Reshuffle</string>
+    <string name="card_actions_open_content_description">Open media actions</string>
+    <string name="card_actions_sheet_title">Media actions</string>
+    <string name="card_actions_sheet_description">Share this item to WeChat, QQ, X, and other apps through Android system share.</string>
+    <string name="card_actions_share">Share</string>
+    <string name="share_media_chooser_title">Share this moment</string>
+    <string name="share_media_failed_toast">No app is currently available for sharing.</string>
 
     <string name="partial_access_icon_content_description">Partial photo access enabled</string>
     <string name="partial_access_title">Browsing a selected subset</string>
@@ -25,12 +31,18 @@
     <string name="swipe_delete_title">Enable delete action</string>
     <string name="swipe_delete_enabled_description">Enabled. Any direction mapped to Delete will ask Android to remove that photo.</string>
     <string name="swipe_delete_disabled_description">Disabled for safer browsing. Delete actions will fall back to next photo.</string>
+    <string name="delete_reminder_title">Delete reminder</string>
+    <string name="delete_reminder_enabled_description">Enabled. Show a short reminder after a photo is deleted.</string>
+    <string name="delete_reminder_disabled_description">Disabled. No reminder is shown after deletion.</string>
+    <string name="delete_reminder_toast">Photo deleted</string>
     <string name="default_behavior_title">Default controls</string>
     <string name="default_behavior_line_up_next">Up swipe: next photo</string>
     <string name="default_behavior_line_down_previous">Down swipe: previous photo</string>
     <string name="default_behavior_line_left_delete">Left swipe: delete photo</string>
     <string name="default_behavior_line_delete_prerequisite">Delete requires "Enable delete action" in Settings. If it is off, delete gestures become next-photo swipes.</string>
     <string name="default_behavior_line_direct_delete">Want direct delete without Android confirmation? Turn on Silent delete in Settings.</string>
+        <string name="default_behavior_line_tap_toggle">Single tap photo: toggle card full-image mode (you can disable this in Settings).</string>
+        <string name="default_behavior_line_delete_delay">Delete reminder can appear slightly later after a left swipe, because Android deletion needs a short moment to finish.</string>
     <string name="default_behavior_line_visibility_rule">Two-finger controls: pinch to zoom the photo and drag with two fingers to move it inside the card while the card stays fixed. Single tap resets zoom back to original size. Tip: this panel auto-hides after appearing 5 times in one month, and auto-enables again next month. If you manually turn it off in Settings, it stays off next month too.</string>
     <string name="default_behavior_collapsed_hint">Tap to expand default controls</string>
     <string name="default_behavior_expand">Expand default controls</string>
@@ -40,6 +52,12 @@
     <string name="show_full_image_title">Show full image in card</string>
     <string name="show_full_image_enabled_description">Enabled. Cards keep the entire photo visible with blank margins if needed.</string>
     <string name="show_full_image_disabled_description">Disabled (default). Cards use crop-fill for a fuller edge-to-edge look.</string>
+    <string name="card_actions_button_title">Top-right actions button</string>
+    <string name="card_actions_button_enabled_description">Enabled. Show the top-right menu button on the current card for sharing and quick actions.</string>
+    <string name="card_actions_button_disabled_description">Disabled. Hide the top-right menu button on the current card.</string>
+    <string name="tap_image_toggle_title">Tap to toggle full image</string>
+    <string name="tap_image_toggle_enabled_description">Enabled. Tapping the top photo switches between crop-fill and full-image display.</string>
+    <string name="tap_image_toggle_disabled_description">Disabled. Tapping the top photo does not switch display mode.</string>
     <string name="floating_delete_button_title">Floating delete button</string>
     <string name="floating_delete_button_enabled_description">Enabled. A small red delete button appears at the lower-right and can be dragged after long-press.</string>
     <string name="floating_delete_button_disabled_description">Disabled by default. No floating delete button is shown.</string>
@@ -72,6 +90,8 @@
     <string name="swipe_action_next">Next photo</string>
     <string name="swipe_behavior_title">Swipe behavior</string>
     <string name="swipe_behavior_description">Choose the action for each swipe direction.</string>
+    <string name="swipe_sensitivity_label">Swipe sensitivity: %1$d%%</string>
+    <string name="swipe_sensitivity_description">Higher sensitivity starts and dismisses swipes with shorter finger movement. Lower sensitivity is more stable and less likely to trigger by mistake.</string>
     <string name="swipe_direction_left">Swipe left</string>
     <string name="swipe_direction_right">Swipe right</string>
     <string name="swipe_direction_up">Swipe up</string>
@@ -87,7 +107,21 @@
     <string name="settings_section_swipe">Gestures</string>
     <string name="settings_section_delete">Delete</string>
     <string name="settings_section_language">Language</string>
+    <string name="settings_section_help">Settings Help</string>
     <string name="settings_section_update">Update</string>
+
+    <string name="settings_help_entry_title">What each setting does</string>
+    <string name="settings_help_entry_description">Open a concise explanation for gesture, display, delete, language, and update options.</string>
+    <string name="settings_help_entry_open">View</string>
+    <string name="settings_help_dialog_title">Settings Guide</string>
+    <string name="settings_help_line_swipe">Swipe behavior: assign each direction to previous, next, delete, or skip; sensitivity controls how far you must drag before a swipe confirms.</string>
+    <string name="settings_help_line_display">Display: full-image mode keeps the whole photo visible, while crop-fill makes cards feel fuller edge-to-edge.</string>
+    <string name="settings_help_line_card_actions">Top-right actions button: controls whether the vertical three-dot menu appears on the current card.</string>
+    <string name="settings_help_line_delete">Delete options: enable delete gestures, choose whether to show delete reminders, and optionally keep a floating delete button.</string>
+    <string name="settings_help_line_gesture_ball">Gesture floating ball: preview action first, then execute on release; you can tune its size, feedback sound, and hint text.</string>
+    <string name="settings_help_line_silent_delete">Silent delete: after authorizing DCIM and Pictures folders, eligible photos can be removed without Android confirmation dialogs.</string>
+    <string name="settings_help_line_language">Language: switch between Arabic, English, Spanish, French, Russian, Chinese, or follow the system default.</string>
+    <string name="settings_help_line_update">Update: check manually, update now, or postpone reminders until a newer release is available.</string>
 
     <string name="usage_guide_title">How to use quickly</string>
     <string name="usage_guide_line_one">1) Shuffle: swipe cards by your configured directions; on the top card, use two fingers to pinch-zoom and move the photo inside the fixed card frame, and single tap to reset zoom; or use the gesture floating ball when enabled.</string>

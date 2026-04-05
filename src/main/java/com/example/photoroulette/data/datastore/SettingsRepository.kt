@@ -65,6 +65,18 @@ class SettingsRepository(
             preferences[Keys.ShowFullImage] ?: false
         }
 
+    val showCardActionsButton: Flow<Boolean> = appContext.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            preferences[Keys.ShowCardActionsButton] ?: DEFAULT_CARD_ACTIONS_BUTTON_VISIBLE
+        }
+
     val isTapImageToggleEnabled: Flow<Boolean> = appContext.dataStore.data
         .catch { exception ->
             if (exception is IOException) {
@@ -289,6 +301,12 @@ class SettingsRepository(
         }
     }
 
+    suspend fun setShowCardActionsButton(enabled: Boolean) {
+        appContext.dataStore.edit { preferences ->
+            preferences[Keys.ShowCardActionsButton] = enabled
+        }
+    }
+
     suspend fun setTapImageToggleEnabled(enabled: Boolean) {
         appContext.dataStore.edit { preferences ->
             preferences[Keys.EnableTapImageToggle] = enabled
@@ -471,6 +489,7 @@ class SettingsRepository(
         const val DEFAULT_SWIPE_GESTURE_SENSITIVITY = 1f
         const val DEFAULT_DELETE_REMINDER_ENABLED = true
         const val DEFAULT_TAP_IMAGE_TOGGLE_ENABLED = true
+        const val DEFAULT_CARD_ACTIONS_BUTTON_VISIBLE = true
 
         val DEFAULT_LEFT_ACTION = SwipeAction.Delete
         val DEFAULT_RIGHT_ACTION = SwipeAction.Next

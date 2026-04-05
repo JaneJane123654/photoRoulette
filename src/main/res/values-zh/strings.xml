@@ -55,6 +55,9 @@
     <string name="show_full_image_title">卡片完整展示图片</string>
     <string name="show_full_image_enabled_description">已开启。卡片会完整显示整张图片，可能出现留白。</string>
     <string name="show_full_image_disabled_description">默认关闭。卡片保持当前裁剪铺满样式。</string>
+    <string name="card_actions_button_title">右上角三点操作按钮</string>
+    <string name="card_actions_button_enabled_description">已开启。顶部卡片会显示右上角三点菜单，可用于分享和快捷操作。</string>
+    <string name="card_actions_button_disabled_description">已关闭。顶部卡片不再显示右上角三点菜单。</string>
     <string name="tap_image_toggle_title">单击切换完整展示</string>
     <string name="tap_image_toggle_enabled_description">已开启。单击顶部图片可在裁剪铺满与完整展示之间切换。</string>
     <string name="tap_image_toggle_disabled_description">已关闭。单击顶部图片不会切换展示模式。</string>
@@ -104,7 +107,21 @@
     <string name="settings_section_swipe">手势</string>
     <string name="settings_section_delete">删除</string>
     <string name="settings_section_language">语言</string>
+    <string name="settings_section_help">设置说明</string>
     <string name="settings_section_update">更新</string>
+
+    <string name="settings_help_entry_title">各设置项作用说明</string>
+    <string name="settings_help_entry_description">点击查看手势、显示、删除、语言与更新等配置项的具体作用。</string>
+    <string name="settings_help_entry_open">查看</string>
+    <string name="settings_help_dialog_title">设置项说明</string>
+    <string name="settings_help_line_swipe">滑动行为：可为四个方向分别设置“上一张 / 下一张 / 删除 / 跳过”；灵敏度决定触发所需滑动距离。</string>
+    <string name="settings_help_line_display">显示相关：完整展示会尽量显示整张图；裁剪铺满会让卡片更满屏。</string>
+    <string name="settings_help_line_card_actions">右上角三点操作按钮：控制顶部卡片是否显示三点竖排菜单。</string>
+    <string name="settings_help_line_delete">删除相关：可开启删除手势、删除提醒，以及可拖动的悬浮删除按钮。</string>
+    <string name="settings_help_line_gesture_ball">手势悬浮球：先预览动作再松手执行；可调大小、操作声音和提示文案。</string>
+    <string name="settings_help_line_silent_delete">静默删除：授权 DCIM 与 Pictures 后，符合条件的照片可跳过系统确认直接删除。</string>
+    <string name="settings_help_line_language">语言设置：支持阿拉伯语、英语、西班牙语、法语、俄语、中文，也可跟随系统。</string>
+    <string name="settings_help_line_update">更新设置：可手动检查更新、立即安装，或延后到更高版本再提醒。</string>
 
     <string name="usage_guide_title">快速上手</string>
     <string name="usage_guide_line_one">1）浏览：按你配置的方向滑动卡片；在顶部卡片上可用双指捏合缩放图片并双指拖动移动图片（卡片不动），单击可恢复原始大小；开启手势悬浮球后也可通过悬浮球执行动作。</string>

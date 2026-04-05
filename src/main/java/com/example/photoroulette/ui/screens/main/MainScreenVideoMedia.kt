@@ -10,7 +10,9 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.VectorConverter
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -68,6 +70,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -122,6 +125,7 @@ import com.example.photoroulette.model.MediaKind
 import com.example.photoroulette.model.SilentDeleteScope
 import com.example.photoroulette.model.SwipeAction
 import com.example.photoroulette.model.UpdateCheckFeedback
+import coil.ImageLoader
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import coil.request.videoFrameMillis
@@ -145,6 +149,7 @@ internal fun VideoCardContent(
     card: MediaCard,
     isTopCard: Boolean,
     playerPool: DeckPlayerPool,
+    videoCoverImageLoader: ImageLoader,
     showFullImage: Boolean,
     onGestureLockChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
@@ -158,15 +163,18 @@ internal fun VideoCardContent(
     var visualState by remember(card.id) { mutableStateOf(PhotoVisualState.Loading) }
     var isCoverVisible by remember(card.id) { mutableStateOf(true) }
     var isLiveMotionActive by remember(card.id) { mutableStateOf(false) }
+    var coverFrameMs by remember(card.id) { mutableLongStateOf(VIDEO_COVER_PRIMARY_FRAME_MS) }
+    var hasRenderedFirstFrame by remember(card.id) { mutableStateOf(false) }
+    var hasPlayerTerminalError by remember(card.id) { mutableStateOf(false) }
 
     val currentIsLivePhoto by rememberUpdatedState(isLivePhoto)
     val currentIsLiveMotionActive by rememberUpdatedState(isLiveMotionActive)
 
-    val previewRequest = remember(context, card.id, card.previewUri) {
+    val previewRequest = remember(context, card.id, playbackUri, card.previewUri, coverFrameMs) {
         ImageRequest.Builder(context)
-            .data(card.previewUri)
+            .data(playbackUri ?: card.previewUri)
             .crossfade(false)
-            .videoFrameMillis(0)
+            .videoFrameMillis(coverFrameMs)
             .bitmapConfig(Bitmap.Config.RGB_565)
             .build()
     }
@@ -177,15 +185,31 @@ internal fun VideoCardContent(
         onGestureLockChanged(false)
     }
 
-    LaunchedEffect(card.id, isTopCard, playbackUri) {
+    LaunchedEffect(card.id, isTopCard, playbackUri, shouldAttachPlayer, isLivePhoto) {
         isCoverVisible = true
         isLiveMotionActive = false
+        coverFrameMs = VIDEO_COVER_PRIMARY_FRAME_MS
+        hasRenderedFirstFrame = false
+        hasPlayerTerminalError = false
         visualState = PhotoVisualState.Loading
 
-        if (!isTopCard || playbackUri == null || !playerPool.isActiveUri(playbackUri)) {
+        if (!shouldAttachPlayer || isLivePhoto) {
             return@LaunchedEffect
         }
+
+        delay(VIDEO_FIRST_FRAME_TIMEOUT_MS)
+        if (!hasRenderedFirstFrame && !hasPlayerTerminalError && playerPool.isActiveUri(playbackUri)) {
+            isCoverVisible = true
+            isLiveMotionActive = false
+            visualState = PhotoVisualState.Error
+        }
     }
+
+    val coverAlpha by animateFloatAsState(
+        targetValue = if (!isTopCard || isCoverVisible) 1f else 0f,
+        animationSpec = tween(durationMillis = VIDEO_COVER_FADE_DURATION_MS),
+        label = "videoCoverAlpha",
+    )
 
     DisposableEffect(activePlayer, playbackUri, shouldAttachPlayer) {
         if (!shouldAttachPlayer) {
@@ -198,6 +222,8 @@ internal fun VideoCardContent(
                         return
                     }
 
+                    hasRenderedFirstFrame = true
+                    hasPlayerTerminalError = false
                     if (!currentIsLivePhoto || currentIsLiveMotionActive) {
                         isCoverVisible = false
                     }
@@ -209,6 +235,7 @@ internal fun VideoCardContent(
                         return
                     }
 
+                    hasPlayerTerminalError = true
                     isCoverVisible = true
                     isLiveMotionActive = false
                     visualState = PhotoVisualState.Error
@@ -221,7 +248,7 @@ internal fun VideoCardContent(
 
                     when (playbackState) {
                         Player.STATE_BUFFERING -> {
-                            if (visualState != PhotoVisualState.Error) {
+                            if (!hasRenderedFirstFrame && visualState != PhotoVisualState.Error) {
                                 visualState = PhotoVisualState.Loading
                             }
                         }
@@ -316,6 +343,7 @@ internal fun VideoCardContent(
                         useController = false
                         setShutterBackgroundColor(AndroidColor.TRANSPARENT)
                         setKeepContentOnPlayerReset(true)
+                        setEnableComposeSurfaceSyncWorkaround(true)
                         resizeMode = if (showFullImage) {
                             AspectRatioFrameLayout.RESIZE_MODE_FIT
                         } else {
@@ -338,11 +366,14 @@ internal fun VideoCardContent(
             )
         }
 
-        if (!isTopCard || isCoverVisible) {
+        if (!isTopCard || isCoverVisible || coverAlpha > VIDEO_COVER_MIN_VISIBLE_ALPHA) {
             AsyncImage(
+                imageLoader = videoCoverImageLoader,
                 model = previewRequest,
                 contentDescription = stringResource(id = R.string.photo_content_description),
-                modifier = Modifier.matchParentSize(),
+                modifier = Modifier
+                    .matchParentSize()
+                    .graphicsLayer { alpha = coverAlpha },
                 contentScale = if (showFullImage) ContentScale.Fit else ContentScale.Crop,
                 placeholder = transparentPainter,
                 error = transparentPainter,
@@ -358,16 +389,18 @@ internal fun VideoCardContent(
                     }
                 },
                 onError = {
-                    if (!isTopCard || playbackUri == null) {
-                        visualState = PhotoVisualState.Error
-                    } else if (visualState != PhotoVisualState.Error) {
+                    if (coverFrameMs != VIDEO_COVER_FALLBACK_FRAME_MS) {
+                        coverFrameMs = VIDEO_COVER_FALLBACK_FRAME_MS
+                    }
+
+                    if (visualState != PhotoVisualState.Error) {
                         visualState = PhotoVisualState.Loading
                     }
                 },
             )
         }
 
-        if (visualState == PhotoVisualState.Error) {
+        if (visualState == PhotoVisualState.Error && isTopCard) {
             PhotoFallbackContent(
                 isError = true,
                 modifier = Modifier.align(Alignment.Center),
@@ -375,5 +408,11 @@ internal fun VideoCardContent(
         }
     }
 }
+
+private const val VIDEO_COVER_PRIMARY_FRAME_MS = 80L
+private const val VIDEO_COVER_FALLBACK_FRAME_MS = 320L
+private const val VIDEO_FIRST_FRAME_TIMEOUT_MS = 3_000L
+private const val VIDEO_COVER_FADE_DURATION_MS = 220
+private const val VIDEO_COVER_MIN_VISIBLE_ALPHA = 0.01f
 
 

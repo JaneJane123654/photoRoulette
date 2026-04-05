@@ -15,6 +15,12 @@
     <string name="home_header_description">Randomly browse your gallery with one-handed gestures. Open Settings below to customize behavior.</string>
     <string name="refresh_button_content_description">Reshuffle your photo deck</string>
     <string name="refresh_button_label">Reshuffle</string>
+    <string name="card_actions_open_content_description">Ouvrir les actions média</string>
+    <string name="card_actions_sheet_title">Actions média</string>
+    <string name="card_actions_sheet_description">Partagez cet élément vers WeChat, QQ, X et d\'autres applications via le partage système Android.</string>
+    <string name="card_actions_share">Partager</string>
+    <string name="share_media_chooser_title">Partager ce moment</string>
+    <string name="share_media_failed_toast">Aucune application de partage n\'est disponible pour le moment.</string>
     <string name="settings_entry_title">Settings</string>
     <string name="settings_entry_description">Customize gestures, delete behavior, display style, and language.</string>
     <string name="settings_entry_open">Open</string>
@@ -25,6 +31,8 @@
     <string name="default_behavior_line_left_delete">Left swipe: delete photo</string>
     <string name="default_behavior_line_delete_prerequisite">Delete requires &quot;Enable delete action&quot; in Settings. If it is off, delete gestures become next-photo swipes.</string>
     <string name="default_behavior_line_direct_delete">Want direct delete without Android confirmation? Turn on Silent delete in Settings.</string>
+    <string name="default_behavior_line_tap_toggle">Appui simple sur la photo : bascule du mode image complète de la carte (désactivable dans les paramètres).</string>
+    <string name="default_behavior_line_delete_delay">Le rappel de suppression peut apparaître avec un léger retard après un balayage gauche, car Android a besoin d\'un court instant pour finaliser la suppression.</string>
     <string name="default_behavior_line_visibility_rule">Two-finger controls: pinch to zoom the photo and drag with two fingers to move it inside the card while the card stays fixed. Tip: this panel auto-hides after appearing 5 times in one month, and auto-enables again next month. If you manually turn it off in Settings, it stays off next month too.</string>
     <string name="default_behavior_collapsed_hint">Tap to expand default controls</string>
     <string name="default_behavior_expand">Expand default controls</string>
@@ -40,9 +48,19 @@
     <string name="swipe_delete_title">Enable delete action</string>
     <string name="swipe_delete_enabled_description">Enabled. Any direction mapped to Delete will ask Android to remove that photo.</string>
     <string name="swipe_delete_disabled_description">Disabled for safer browsing. Delete actions will fall back to next photo.</string>
+    <string name="delete_reminder_title">Rappel de suppression</string>
+    <string name="delete_reminder_enabled_description">Activé. Affiche un bref rappel après la suppression d\'une photo.</string>
+    <string name="delete_reminder_disabled_description">Désactivé. Aucun rappel n\'est affiché après suppression.</string>
+    <string name="delete_reminder_toast">Photo supprimée</string>
     <string name="show_full_image_title">Show full image in card</string>
     <string name="show_full_image_enabled_description">Enabled. Cards keep the entire photo visible with blank margins if needed.</string>
     <string name="show_full_image_disabled_description">Disabled (default). Cards use crop-fill for a fuller edge-to-edge look.</string>
+    <string name="card_actions_button_title">Bouton d\'actions en haut à droite</string>
+    <string name="card_actions_button_enabled_description">Activé. Affiche le bouton de menu à trois points sur la carte actuelle pour partager et accéder aux actions rapides.</string>
+    <string name="card_actions_button_disabled_description">Désactivé. Masque le bouton de menu à trois points sur la carte actuelle.</string>
+    <string name="tap_image_toggle_title">Appuyer pour basculer l\'image complète</string>
+    <string name="tap_image_toggle_enabled_description">Activé. Appuyer sur la photo du dessus alterne entre recadrage et affichage complet.</string>
+    <string name="tap_image_toggle_disabled_description">Désactivé. Appuyer sur la photo du dessus ne change pas le mode d\'affichage.</string>
     <string name="floating_delete_button_title">Floating delete button</string>
     <string name="floating_delete_button_enabled_description">Enabled. A small red delete button appears at the lower-right and can be dragged after long-press.</string>
     <string name="floating_delete_button_disabled_description">Disabled by default. No floating delete button is shown.</string>
@@ -50,6 +68,12 @@
     <string name="gesture_ball_enabled_description">Enabled. Slide from center to colored ring, preview action, then release to execute. Press and hold center to drag and reposition.</string>
     <string name="gesture_ball_disabled_description">Disabled by default. Use regular card swipes only.</string>
     <string name="gesture_ball_size_label">Floating ball size: %1$d%%</string>
+    <string name="gesture_ball_feedback_title">Son d\'action de la boule gestuelle</string>
+    <string name="gesture_ball_feedback_enabled_description">Activé. Un retour sonore est joué lors du glisser par appui long et des changements d\'action cible.</string>
+    <string name="gesture_ball_feedback_disabled_description">Désactivé. Aucun retour sonore n\'est joué pendant l\'utilisation de la boule gestuelle.</string>
+    <string name="gesture_ball_hint_title">Indice d\'action de la boule gestuelle</string>
+    <string name="gesture_ball_hint_enabled_description">Activé. Affiche un texte d\'indice d\'action pendant le glisser.</string>
+    <string name="gesture_ball_hint_disabled_description">Désactivé. N\'affiche pas le texte d\'indice d\'action flottant.</string>
     <string name="gesture_ball_preview_execute">Release to execute: %1$s</string>
     <string name="gesture_ball_preview_unavailable">Cannot execute now: %1$s</string>
     <string name="silent_delete_title">Silent delete</string>
@@ -65,6 +89,8 @@
     <string name="silent_delete_scope_missing_description">Not authorized yet</string>
     <string name="swipe_behavior_title">Swipe behavior</string>
     <string name="swipe_behavior_description">Choose the action for each swipe direction.</string>
+    <string name="swipe_sensitivity_label">Sensibilité du balayage : %1$d%%</string>
+    <string name="swipe_sensitivity_description">Plus la sensibilité est élevée, plus la distance nécessaire est courte ; plus elle est faible, plus le geste est stable et moins sujet aux déclenchements accidentels.</string>
     <string name="swipe_direction_left">Swipe left</string>
     <string name="swipe_direction_right">Swipe right</string>
     <string name="swipe_direction_up">Swipe up</string>
@@ -81,7 +107,21 @@
     <string name="settings_section_swipe">Gestures</string>
     <string name="settings_section_delete">Delete</string>
     <string name="settings_section_language">Language</string>
+    <string name="settings_section_help">Aide des paramètres</string>
     <string name="settings_section_update">Update</string>
+
+    <string name="settings_help_entry_title">Rôle de chaque paramètre</string>
+    <string name="settings_help_entry_description">Ouvre une explication concise des options de geste, affichage, suppression, langue et mise à jour.</string>
+    <string name="settings_help_entry_open">Voir</string>
+    <string name="settings_help_dialog_title">Guide des paramètres</string>
+    <string name="settings_help_line_swipe">Comportement des balayages : attribuez chaque direction à précédent, suivant, supprimer ou ignorer ; la sensibilité détermine la distance à parcourir pour confirmer.</string>
+    <string name="settings_help_line_display">Affichage : le mode image complète garde toute la photo visible, tandis que le recadrage remplit la carte bord à bord.</string>
+    <string name="settings_help_line_card_actions">Bouton d\'actions en haut à droite : contrôle l\'affichage du menu vertical à trois points sur la carte actuelle.</string>
+    <string name="settings_help_line_delete">Options de suppression : activez les gestes de suppression, choisissez l\'affichage des rappels et, si besoin, gardez un bouton flottant.</string>
+    <string name="settings_help_line_gesture_ball">Boule gestuelle : prévisualisez d\'abord l\'action puis exécutez au relâchement ; ajustez taille, son de retour et texte d\'indice.</string>
+    <string name="settings_help_line_silent_delete">Suppression silencieuse : après autorisation des dossiers DCIM et Pictures, les photos éligibles peuvent être supprimées sans boîte de confirmation Android.</string>
+    <string name="settings_help_line_language">Langue : basculez entre arabe, anglais, espagnol, français, russe et chinois, ou suivez la langue du système.</string>
+    <string name="settings_help_line_update">Mise à jour : vérifiez manuellement, mettez à jour maintenant ou reportez les rappels jusqu\'à une version plus récente.</string>
 
     <string name="usage_guide_title">How to use quickly</string>
     <string name="usage_guide_line_one">1) Mélange : balayez les cartes selon vos directions configurées ; sur la carte du dessus, utilisez deux doigts pour zoomer et déplacer la photo dans le cadre fixe ; ou utilisez la boule gestuelle si elle est activée.</string>

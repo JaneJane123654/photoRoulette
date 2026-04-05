@@ -132,7 +132,9 @@ import com.example.photoroulette.model.MediaKind
 import com.example.photoroulette.model.SilentDeleteScope
 import com.example.photoroulette.model.SwipeAction
 import com.example.photoroulette.model.UpdateCheckFeedback
+import coil.ImageLoader
 import coil.compose.AsyncImage
+import coil.decode.VideoFrameDecoder
 import coil.request.ImageRequest
 import coil.request.videoFrameMillis
 import com.example.photoroulette.ui.components.EmptyGalleryScreen
@@ -163,6 +165,7 @@ internal fun PhotoDeck(
     swipeUpAction: SwipeAction,
     swipeDownAction: SwipeAction,
     showFullImage: Boolean,
+    showCardActionsButton: Boolean,
     isTapImageToggleEnabled: Boolean,
     onSwipeAction: (SwipeAction, Long) -> Boolean,
     modifier: Modifier = Modifier,
@@ -170,6 +173,13 @@ internal fun PhotoDeck(
     val context = LocalContext.current
     val density = LocalDensity.current
     val playerPool = remember(context) { DeckPlayerPool(context) }
+    val videoCoverImageLoader = remember(context) {
+        ImageLoader.Builder(context)
+            .components {
+                add(VideoFrameDecoder.Factory())
+            }
+            .build()
+    }
     var isCardActionsSheetVisible by rememberSaveable { mutableStateOf(false) }
     var topCardDragProgress by remember { mutableFloatStateOf(0f) }
     var topCardDownCoverProgress by remember { mutableFloatStateOf(0f) }
@@ -183,8 +193,8 @@ internal fun PhotoDeck(
         else -> null
     }
     val previousRightCoverTriggerDirection = when {
-        swipeRightAction == SwipeAction.Previous -> SwipeDirection.Right
         swipeLeftAction == SwipeAction.Previous -> SwipeDirection.Left
+        swipeRightAction == SwipeAction.Previous -> SwipeDirection.Right
         else -> null
     }
     val shouldUsePreviousCardTopCover =
@@ -198,9 +208,10 @@ internal fun PhotoDeck(
             ?.playbackUri
     }
 
-    DisposableEffect(playerPool) {
+    DisposableEffect(playerPool, videoCoverImageLoader) {
         onDispose {
             playerPool.release()
+            videoCoverImageLoader.shutdown()
         }
     }
 
@@ -211,6 +222,12 @@ internal fun PhotoDeck(
         topCardRightCoverProgress = 0f
         isTopCardForceFullImage = false
         isTopCardImageGestureLocked = false
+    }
+
+    LaunchedEffect(showCardActionsButton) {
+        if (!showCardActionsButton) {
+            isCardActionsSheetVisible = false
+        }
     }
 
     LaunchedEffect(
@@ -365,6 +382,7 @@ internal fun PhotoDeck(
                                 card = card,
                                 isTopCard = isTopCard,
                                 playerPool = playerPool,
+                                videoCoverImageLoader = videoCoverImageLoader,
                                 showFullImage = if (isTopCard) topCardShowFullImage else showFullImage,
                                 enableTwoFingerTransform = isTopCard,
                                 enableTapToggle = isTapImageToggleEnabled,
@@ -380,7 +398,7 @@ internal fun PhotoDeck(
                                 },
                             )
 
-                            if (isTopCard) {
+                            if (isTopCard && showCardActionsButton) {
                                 IconButton(
                                     onClick = { isCardActionsSheetVisible = true },
                                     enabled = !isCardActionsSheetVisible,
@@ -444,6 +462,7 @@ internal fun PhotoDeck(
                             card = coverCard,
                             isTopCard = false,
                             playerPool = playerPool,
+                            videoCoverImageLoader = videoCoverImageLoader,
                             showFullImage = showFullImage,
                             enableTwoFingerTransform = false,
                             enableTapToggle = false,
@@ -455,7 +474,7 @@ internal fun PhotoDeck(
             }
         }
 
-        if (isCardActionsSheetVisible && topCard != null) {
+        if (showCardActionsButton && isCardActionsSheetVisible && topCard != null) {
             CardActionsBottomSheet(
                 onDismissRequest = { isCardActionsSheetVisible = false },
                 onShareClick = {
@@ -479,6 +498,7 @@ internal fun MediaCardContent(
     card: MediaCard,
     isTopCard: Boolean,
     playerPool: DeckPlayerPool,
+    videoCoverImageLoader: ImageLoader,
     showFullImage: Boolean,
     enableTwoFingerTransform: Boolean,
     enableTapToggle: Boolean,
@@ -517,6 +537,7 @@ internal fun MediaCardContent(
                 card = card,
                 isTopCard = isTopCard,
                 playerPool = playerPool,
+                videoCoverImageLoader = videoCoverImageLoader,
                 showFullImage = showFullImage,
                 onGestureLockChanged = onGestureLockChanged,
                 modifier = modifier,

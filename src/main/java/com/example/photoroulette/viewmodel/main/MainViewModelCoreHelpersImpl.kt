@@ -53,6 +53,7 @@ import com.example.photoroulette.viewmodel.MainViewModel.PendingDeleteEntry
 import com.example.photoroulette.viewmodel.MainViewModel.SystemDeleteRequest
 
 private const val PRELOAD_ANIMATED_SIZE_PX = 1080
+private const val PRELOAD_VIDEO_FRAME_MS = 80L
 
 internal fun MainViewModel.emitQueueStateImpl() {
         if (_permissionMode.value == PermissionHelper.PermissionMode.DENIED) {
@@ -106,7 +107,7 @@ internal fun MainViewModel.preloadUpcomingImagesImpl() {
                 .data(card.previewUri)
 
             if (card.isVideoLike) {
-                requestBuilder.videoFrameMillis(0)
+                requestBuilder.videoFrameMillis(PRELOAD_VIDEO_FRAME_MS)
             }
 
             if (card.kind == MediaKind.AnimatedImage) {

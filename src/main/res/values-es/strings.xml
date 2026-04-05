@@ -15,6 +15,12 @@
     <string name="home_header_description">Desliza a la izquierda o derecha para omitir. Desliza hacia arriba para eliminar cuando ese modo esté activado.</string>
     <string name="refresh_button_content_description">Mezclar de nuevo tu mazo de fotos</string>
     <string name="refresh_button_label">Mezclar de nuevo</string>
+    <string name="card_actions_open_content_description">Abrir acciones multimedia</string>
+    <string name="card_actions_sheet_title">Acciones multimedia</string>
+    <string name="card_actions_sheet_description">Comparte este elemento por WeChat, QQ, X y otras apps mediante el compartir del sistema Android.</string>
+    <string name="card_actions_share">Compartir</string>
+    <string name="share_media_chooser_title">Compartir este momento</string>
+    <string name="share_media_failed_toast">No hay aplicaciones disponibles para compartir.</string>
 
     <string name="partial_access_icon_content_description">Acceso parcial a fotos activado</string>
     <string name="partial_access_title">Navegando un subconjunto seleccionado</string>
@@ -25,6 +31,10 @@
     <string name="swipe_delete_title">Desliza hacia arriba para eliminar</string>
     <string name="swipe_delete_enabled_description">Activado. Deslizar hacia arriba en la tarjeta superior pedirá a Android eliminar esa foto.</string>
     <string name="swipe_delete_disabled_description">Desactivado para una navegación más segura. Deslizar hacia arriba funciona como omitir.</string>
+    <string name="delete_reminder_title">Aviso de eliminación</string>
+    <string name="delete_reminder_enabled_description">Activado. Muestra un aviso breve después de eliminar una foto.</string>
+    <string name="delete_reminder_disabled_description">Desactivado. No se muestra aviso tras eliminar.</string>
+    <string name="delete_reminder_toast">Foto eliminada</string>
 
     <string name="default_behavior_title">Controles predeterminados</string>
     <string name="default_behavior_line_up_next">Desliza arriba: foto siguiente</string>
@@ -32,6 +42,8 @@
     <string name="default_behavior_line_left_delete">Desliza izquierda: eliminar foto</string>
     <string name="default_behavior_line_delete_prerequisite">Eliminar requiere activar "Habilitar acción de eliminar" en Ajustes. Si está desactivado, los gestos de eliminar pasan a foto siguiente.</string>
     <string name="default_behavior_line_direct_delete">¿Quieres eliminar sin confirmación de Android? Activa Eliminación silenciosa en Ajustes.</string>
+    <string name="default_behavior_line_tap_toggle">Toque único en la foto: alterna el modo de imagen completa de la tarjeta (puedes desactivarlo en Ajustes).</string>
+    <string name="default_behavior_line_delete_delay">El aviso de eliminación puede aparecer con un pequeño retraso tras deslizar a la izquierda porque Android necesita un momento para completar el borrado.</string>
     <string name="default_behavior_line_visibility_rule">Controles con dos dedos: pellizca para ampliar la foto y arrástrala con dos dedos dentro de la tarjeta, mientras la tarjeta permanece fija. Sugerencia: este panel se oculta automáticamente tras aparecer 5 veces en un mes y se vuelve a activar el mes siguiente. Si lo desactivas manualmente en Ajustes, seguirá apagado el mes siguiente.</string>
     <string name="default_behavior_collapsed_hint">Toca para expandir controles predeterminados</string>
     <string name="default_behavior_expand">Expandir controles predeterminados</string>
@@ -41,6 +53,12 @@
     <string name="show_full_image_title">Mostrar imagen completa en la tarjeta</string>
     <string name="show_full_image_enabled_description">Activado. La tarjeta muestra toda la foto, con márgenes vacíos si hace falta.</string>
     <string name="show_full_image_disabled_description">Desactivado (predeterminado). La tarjeta usa recorte para llenar el área.</string>
+    <string name="card_actions_button_title">Botón de acciones arriba a la derecha</string>
+    <string name="card_actions_button_enabled_description">Activado. Muestra el botón de menú de tres puntos en la tarjeta actual para compartir y acciones rápidas.</string>
+    <string name="card_actions_button_disabled_description">Desactivado. Oculta el botón de menú de tres puntos en la tarjeta actual.</string>
+    <string name="tap_image_toggle_title">Toque para alternar imagen completa</string>
+    <string name="tap_image_toggle_enabled_description">Activado. Tocar la foto superior cambia entre recorte y vista completa.</string>
+    <string name="tap_image_toggle_disabled_description">Desactivado. Tocar la foto superior no cambia el modo de visualización.</string>
     <string name="floating_delete_button_title">Botón flotante de eliminar</string>
     <string name="floating_delete_button_enabled_description">Activado. Aparece un botón rojo abajo a la derecha y puede arrastrarse tras pulsación larga.</string>
     <string name="floating_delete_button_disabled_description">Desactivado por defecto. No se muestra botón flotante.</string>
@@ -48,6 +66,12 @@
     <string name="gesture_ball_enabled_description">Activado. Desliza del centro al aro de color para previsualizar y suelta para ejecutar. Mantén pulsado el centro para moverla.</string>
     <string name="gesture_ball_disabled_description">Desactivado por defecto. Usa solo deslizamientos normales de tarjeta.</string>
     <string name="gesture_ball_size_label">Tamaño de la bola: %1$d%%</string>
+    <string name="gesture_ball_feedback_title">Sonido de operación de la bola gestual</string>
+    <string name="gesture_ball_feedback_enabled_description">Activado. Al mantener pulsado para arrastrar y al cambiar de acción objetivo se reproduce retroalimentación.</string>
+    <string name="gesture_ball_feedback_disabled_description">Desactivado. No se reproduce retroalimentación de la bola gestual.</string>
+    <string name="gesture_ball_hint_title">Sugerencia de acción de la bola gestual</string>
+    <string name="gesture_ball_hint_enabled_description">Activado. Muestra texto de sugerencia de acción mientras arrastras.</string>
+    <string name="gesture_ball_hint_disabled_description">Desactivado. No se muestra texto de sugerencia flotante.</string>
     <string name="gesture_ball_preview_execute">Suelta para ejecutar: %1$s</string>
     <string name="gesture_ball_preview_unavailable">Ahora no se puede ejecutar: %1$s</string>
 
@@ -65,6 +89,8 @@
 
     <string name="swipe_behavior_title">Comportamiento de deslizamiento</string>
     <string name="swipe_behavior_description">Elige la acción para cada dirección de deslizamiento.</string>
+    <string name="swipe_sensitivity_label">Sensibilidad de deslizamiento: %1$d%%</string>
+    <string name="swipe_sensitivity_description">Cuanto mayor la sensibilidad, menor distancia de deslizamiento necesitas; cuanto menor, menos toques accidentales y más estabilidad.</string>
     <string name="swipe_direction_left">Deslizar a la izquierda</string>
     <string name="swipe_direction_right">Deslizar a la derecha</string>
     <string name="swipe_direction_up">Deslizar hacia arriba</string>
@@ -84,7 +110,21 @@
     <string name="settings_section_swipe">Gestos</string>
     <string name="settings_section_delete">Eliminar</string>
     <string name="settings_section_language">Idioma</string>
+    <string name="settings_section_help">Ayuda de ajustes</string>
     <string name="settings_section_update">Actualización</string>
+
+    <string name="settings_help_entry_title">Qué hace cada ajuste</string>
+    <string name="settings_help_entry_description">Abre una explicación breve de las opciones de gestos, visualización, eliminación, idioma y actualización.</string>
+    <string name="settings_help_entry_open">Ver</string>
+    <string name="settings_help_dialog_title">Guía de ajustes</string>
+    <string name="settings_help_line_swipe">Comportamiento de deslizamiento: asigna cada dirección a anterior, siguiente, eliminar u omitir; la sensibilidad define cuánta distancia debes arrastrar para confirmar.</string>
+    <string name="settings_help_line_display">Visualización: el modo de imagen completa mantiene toda la foto visible; el recorte rellena la tarjeta de borde a borde.</string>
+    <string name="settings_help_line_card_actions">Botón de acciones arriba a la derecha: controla si aparece el menú vertical de tres puntos en la tarjeta actual.</string>
+    <string name="settings_help_line_delete">Opciones de eliminación: activa gestos de borrar, decide si mostrar avisos y, si quieres, mantiene un botón flotante de eliminación.</string>
+    <string name="settings_help_line_gesture_ball">Bola gestual: primero previsualiza la acción y ejecuta al soltar; puedes ajustar tamaño, sonido de retroalimentación y texto de sugerencia.</string>
+    <string name="settings_help_line_silent_delete">Eliminación silenciosa: tras autorizar DCIM y Pictures, las fotos elegibles pueden borrarse sin cuadros de confirmación de Android.</string>
+    <string name="settings_help_line_language">Idioma: cambia entre árabe, inglés, español, francés, ruso y chino, o sigue el idioma del sistema.</string>
+    <string name="settings_help_line_update">Actualización: comprueba manualmente, actualiza ahora o pospone avisos hasta que exista una versión más nueva.</string>
 
     <string name="usage_guide_title">Cómo usar rápidamente</string>
     <string name="usage_guide_line_one">1) Barajar: desliza tarjetas según tu configuración; en la tarjeta superior usa dos dedos para ampliar y mover la foto dentro del marco fijo; o usa la bola de gestos si está activada.</string>

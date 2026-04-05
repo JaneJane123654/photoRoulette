@@ -15,6 +15,12 @@
     <string name="home_header_description">اسحب لليسار أو اليمين للتخطي. اسحب للأعلى للحذف عند تفعيل هذا الوضع.</string>
     <string name="refresh_button_content_description">إعادة خلط مجموعة الصور</string>
     <string name="refresh_button_label">إعادة خلط</string>
+    <string name="card_actions_open_content_description">فتح إجراءات الوسائط</string>
+    <string name="card_actions_sheet_title">إجراءات الوسائط</string>
+    <string name="card_actions_sheet_description">شارك هذا العنصر عبر WeChat وQQ وX وتطبيقات أخرى من خلال مشاركة Android.</string>
+    <string name="card_actions_share">مشاركة</string>
+    <string name="share_media_chooser_title">مشاركة هذه اللحظة</string>
+    <string name="share_media_failed_toast">لا يوجد تطبيق متاح حالياً للمشاركة.</string>
 
     <string name="partial_access_icon_content_description">تم تفعيل وصول جزئي للصور</string>
     <string name="partial_access_title">تصفح مجموعة محددة</string>
@@ -25,6 +31,10 @@
     <string name="swipe_delete_title">اسحب للأعلى للحذف</string>
     <string name="swipe_delete_enabled_description">مُفعّل. السحب للأعلى على البطاقة العليا سيطلب من Android حذف هذه الصورة.</string>
     <string name="swipe_delete_disabled_description">معطّل لتصفح أكثر أماناً. السحب للأعلى يعمل كتخطي عادي.</string>
+    <string name="delete_reminder_title">تذكير الحذف</string>
+    <string name="delete_reminder_enabled_description">مُفعّل. يعرض تلميحاً قصيراً بعد حذف الصورة.</string>
+    <string name="delete_reminder_disabled_description">معطّل. لا يظهر تلميح بعد الحذف.</string>
+    <string name="delete_reminder_toast">تم حذف الصورة</string>
 
     <string name="default_behavior_title">إرشادات الإجراءات الافتراضية</string>
     <string name="default_behavior_line_up_next">سحب للأعلى: الصورة التالية</string>
@@ -32,6 +42,8 @@
     <string name="default_behavior_line_left_delete">سحب لليسار: حذف الصورة</string>
     <string name="default_behavior_line_delete_prerequisite">الحذف يتطلب تفعيل "تفعيل إجراء الحذف" من الإعدادات. إذا كان مغلقاً، تتحول كل حركات الحذف إلى الانتقال للصورة التالية.</string>
     <string name="default_behavior_line_direct_delete">تريد الحذف المباشر دون تأكيد Android؟ فعّل الحذف الصامت من الإعدادات.</string>
+    <string name="default_behavior_line_tap_toggle">نقرة واحدة على الصورة: تبديل وضع عرض الصورة الكاملة للبطاقة (يمكنك تعطيله من الإعدادات).</string>
+    <string name="default_behavior_line_delete_delay">قد يظهر تذكير الحذف بتأخير بسيط بعد السحب لليسار لأن Android يحتاج وقتاً قصيراً لإكمال عملية الحذف.</string>
     <string name="default_behavior_line_visibility_rule">تحكم بإصبعين: قرّب/بعّد بإصبعين لتكبير الصورة، واسحبها بإصبعين داخل البطاقة بينما تبقى البطاقة نفسها ثابتة. ملاحظة: يتم إخفاء هذا اللوح تلقائياً بعد ظهوره 5 مرات خلال شهر واحد، ويُعاد تفعيله تلقائياً في الشهر التالي. إذا أوقفته يدوياً من الإعدادات، سيبقى متوقفاً في الشهر التالي أيضاً.</string>
     <string name="default_behavior_collapsed_hint">اضغط لتوسيع الإرشادات الافتراضية</string>
     <string name="default_behavior_expand">توسيع الإرشادات الافتراضية</string>
@@ -41,6 +53,12 @@
     <string name="show_full_image_title">عرض الصورة كاملة داخل البطاقة</string>
     <string name="show_full_image_enabled_description">مُفعّل. تعرض البطاقات الصورة كاملة، وقد تظهر هوامش فارغة عند الحاجة.</string>
     <string name="show_full_image_disabled_description">معطّل (افتراضي). تستخدم البطاقات قصاً لملء المساحة.</string>
+    <string name="card_actions_button_title">زر الإجراءات أعلى اليمين</string>
+    <string name="card_actions_button_enabled_description">مُفعّل. يظهر زر القائمة ذات النقاط الثلاث في البطاقة الحالية للمشاركة والإجراءات السريعة.</string>
+    <string name="card_actions_button_disabled_description">معطّل. يتم إخفاء زر القائمة ذات النقاط الثلاث في البطاقة الحالية.</string>
+    <string name="tap_image_toggle_title">انقر للتبديل إلى الصورة الكاملة</string>
+    <string name="tap_image_toggle_enabled_description">مُفعّل. النقر على الصورة العلوية يبدّل بين وضع القص ووضع العرض الكامل.</string>
+    <string name="tap_image_toggle_disabled_description">معطّل. النقر على الصورة العلوية لا يغيّر وضع العرض.</string>
     <string name="floating_delete_button_title">زر حذف عائم</string>
     <string name="floating_delete_button_enabled_description">مُفعّل. يظهر زر حذف أحمر صغير أسفل اليمين ويمكن سحبه بعد ضغط مطوّل.</string>
     <string name="floating_delete_button_disabled_description">معطّل افتراضياً. لا يظهر زر حذف عائم.</string>
@@ -48,6 +66,12 @@
     <string name="gesture_ball_enabled_description">مُفعّل. اسحب من المركز نحو الحلقة الملوّنة لمعاينة الإجراء ثم أفلت للتنفيذ. اضغط مطوّلاً على المركز لتحريكها.</string>
     <string name="gesture_ball_disabled_description">معطّلة افتراضياً. استخدم سحب البطاقات العادي فقط.</string>
     <string name="gesture_ball_size_label">حجم الكرة: %1$d%%</string>
+    <string name="gesture_ball_feedback_title">صوت تشغيل كرة الإيماءات</string>
+    <string name="gesture_ball_feedback_enabled_description">مُفعّل. عند السحب بالضغط المطوّل أو تغيير الإجراء المستهدف يتم تشغيل تغذية راجعة صوتية.</string>
+    <string name="gesture_ball_feedback_disabled_description">معطّل. لا يتم تشغيل تغذية راجعة أثناء استخدام كرة الإيماءات.</string>
+    <string name="gesture_ball_hint_title">تلميح إجراء كرة الإيماءات</string>
+    <string name="gesture_ball_hint_enabled_description">مُفعّل. يعرض نص تلميح الإجراء أثناء السحب.</string>
+    <string name="gesture_ball_hint_disabled_description">معطّل. لا يظهر نص تلميح الإجراء العائم.</string>
     <string name="gesture_ball_preview_execute">أفلت للتنفيذ: %1$s</string>
     <string name="gesture_ball_preview_unavailable">غير متاح الآن: %1$s</string>
 
@@ -65,6 +89,8 @@
 
     <string name="swipe_behavior_title">سلوك السحب</string>
     <string name="swipe_behavior_description">اختر الإجراء لكل اتجاه سحب.</string>
+    <string name="swipe_sensitivity_label">حساسية السحب: %1$d%%</string>
+    <string name="swipe_sensitivity_description">كلما زادت الحساسية قلّت مسافة السحب المطلوبة؛ وكلما انخفضت زادت الثباتية وقلت اللمسات الخاطئة.</string>
     <string name="swipe_direction_left">سحب لليسار</string>
     <string name="swipe_direction_right">سحب لليمين</string>
     <string name="swipe_direction_up">سحب للأعلى</string>
@@ -84,7 +110,21 @@
     <string name="settings_section_swipe">الإيماءات</string>
     <string name="settings_section_delete">الحذف</string>
     <string name="settings_section_language">اللغة</string>
+    <string name="settings_section_help">مساعدة الإعدادات</string>
     <string name="settings_section_update">التحديث</string>
+
+    <string name="settings_help_entry_title">وظيفة كل إعداد</string>
+    <string name="settings_help_entry_description">افتح شرحاً مختصراً لخيارات الإيماءات والعرض والحذف واللغة والتحديث.</string>
+    <string name="settings_help_entry_open">عرض</string>
+    <string name="settings_help_dialog_title">دليل الإعدادات</string>
+    <string name="settings_help_line_swipe">سلوك السحب: عيّن كل اتجاه إلى السابق أو التالي أو الحذف أو التخطي؛ وتحدد الحساسية مسافة السحب اللازمة للتأكيد.</string>
+    <string name="settings_help_line_display">العرض: وضع الصورة الكاملة يبقي الصورة كلها مرئية، بينما القص يملأ البطاقة من الحافة إلى الحافة.</string>
+    <string name="settings_help_line_card_actions">زر الإجراءات أعلى اليمين: يتحكم في إظهار قائمة النقاط الثلاث العمودية على البطاقة الحالية.</string>
+    <string name="settings_help_line_delete">خيارات الحذف: فعّل إيماءات الحذف، وحدد عرض التذكير، ويمكنك إبقاء زر حذف عائم إذا رغبت.</string>
+    <string name="settings_help_line_gesture_ball">كرة الإيماءات: تعاين الإجراء أولاً ثم تنفذه عند الإفلات؛ ويمكنك ضبط الحجم والصوت ونص التلميح.</string>
+    <string name="settings_help_line_silent_delete">الحذف الصامت: بعد منح صلاحية DCIM وPictures يمكن حذف الصور المؤهلة دون نوافذ تأكيد Android.</string>
+    <string name="settings_help_line_language">اللغة: بدّل بين العربية والإنجليزية والإسبانية والفرنسية والروسية والصينية، أو اتبع لغة النظام.</string>
+    <string name="settings_help_line_update">التحديث: تحقّق يدوياً، حدّث الآن، أو أجّل التنبيهات حتى يتوفر إصدار أحدث.</string>
 
     <string name="usage_guide_title">طريقة الاستخدام بسرعة</string>
     <string name="usage_guide_line_one">1) الخلط: اسحب البطاقات حسب إعداداتك؛ وعلى البطاقة العلوية استخدم إصبعين للتكبير وتحريك الصورة داخل إطار البطاقة الثابت؛ أو استخدم كرة الإيماءات عند تفعيلها.</string>

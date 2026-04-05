@@ -55,6 +55,9 @@
     <string name="show_full_image_title">Show full image in card</string>
     <string name="show_full_image_enabled_description">Enabled. Cards keep the entire photo visible with blank margins if needed.</string>
     <string name="show_full_image_disabled_description">Disabled (default). Cards use crop-fill for a fuller edge-to-edge look.</string>
+    <string name="card_actions_button_title">Top-right actions button</string>
+    <string name="card_actions_button_enabled_description">Enabled. Show the top-right menu button on the current card for sharing and quick actions.</string>
+    <string name="card_actions_button_disabled_description">Disabled. Hide the top-right menu button on the current card.</string>
     <string name="tap_image_toggle_title">Tap to toggle full image</string>
     <string name="tap_image_toggle_enabled_description">Enabled. Tapping the top photo switches between crop-fill and full-image display.</string>
     <string name="tap_image_toggle_disabled_description">Disabled. Tapping the top photo does not switch display mode.</string>
@@ -104,7 +107,21 @@
     <string name="settings_section_swipe">Gestures</string>
     <string name="settings_section_delete">Delete</string>
     <string name="settings_section_language">Language</string>
+    <string name="settings_section_help">Settings Help</string>
     <string name="settings_section_update">Update</string>
+
+    <string name="settings_help_entry_title">What each setting does</string>
+    <string name="settings_help_entry_description">Open a concise explanation for gesture, display, delete, language, and update options.</string>
+    <string name="settings_help_entry_open">View</string>
+    <string name="settings_help_dialog_title">Settings Guide</string>
+    <string name="settings_help_line_swipe">Swipe behavior: assign each direction to previous, next, delete, or skip; sensitivity controls how far you must drag before a swipe confirms.</string>
+    <string name="settings_help_line_display">Display: full-image mode keeps the whole photo visible, while crop-fill makes cards feel fuller edge-to-edge.</string>
+    <string name="settings_help_line_card_actions">Top-right actions button: controls whether the vertical three-dot menu appears on the current card.</string>
+    <string name="settings_help_line_delete">Delete options: enable delete gestures, choose whether to show delete reminders, and optionally keep a floating delete button.</string>
+    <string name="settings_help_line_gesture_ball">Gesture floating ball: preview action first, then execute on release; you can tune its size, feedback sound, and hint text.</string>
+    <string name="settings_help_line_silent_delete">Silent delete: after authorizing DCIM and Pictures folders, eligible photos can be removed without Android confirmation dialogs.</string>
+    <string name="settings_help_line_language">Language: switch between Arabic, English, Spanish, French, Russian, Chinese, or follow the system default.</string>
+    <string name="settings_help_line_update">Update: check manually, update now, or postpone reminders until a newer release is available.</string>
 
     <string name="usage_guide_title">How to use quickly</string>
     <string name="usage_guide_line_one">1) Shuffle: swipe cards by your configured directions; on the top card, use two fingers to pinch-zoom and move the photo inside the fixed card frame, and single tap to reset zoom; or use the gesture floating ball when enabled.</string>

@@ -82,6 +82,13 @@ internal fun MainViewModel.initializeStateCollectorsImpl() {
         }
 
         scope.launch {
+            settingsRepository.showCardActionsButton.collect { enabled ->
+                _showCardActionsButton.value = enabled
+                savedStateHandle[KEY_SHOW_CARD_ACTIONS_BUTTON] = enabled
+            }
+        }
+
+        scope.launch {
             settingsRepository.isTapImageToggleEnabled.collect { enabled ->
                 _isTapImageToggleEnabled.value = enabled
                 savedStateHandle[KEY_IS_TAP_IMAGE_TOGGLE_ENABLED] = enabled

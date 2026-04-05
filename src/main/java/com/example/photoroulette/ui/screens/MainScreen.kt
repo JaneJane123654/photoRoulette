@@ -157,6 +157,7 @@ fun MainScreen(
     val isDeleteReminderEnabled by viewModel.isDeleteReminderEnabled.collectAsStateWithLifecycle()
     val swipeGestureSensitivity by viewModel.swipeGestureSensitivity.collectAsStateWithLifecycle()
     val showFullImage by viewModel.showFullImage.collectAsStateWithLifecycle()
+    val showCardActionsButton by viewModel.showCardActionsButton.collectAsStateWithLifecycle()
     val isTapImageToggleEnabled by viewModel.isTapImageToggleEnabled.collectAsStateWithLifecycle()
     val showFloatingDeleteButton by viewModel.showFloatingDeleteButton.collectAsStateWithLifecycle()
     val isGestureBallEnabled by viewModel.isGestureBallEnabled.collectAsStateWithLifecycle()
@@ -195,6 +196,7 @@ fun MainScreen(
         isDeleteReminderEnabled = isDeleteReminderEnabled,
         swipeGestureSensitivity = swipeGestureSensitivity,
         showFullImage = showFullImage,
+        showCardActionsButton = showCardActionsButton,
         isTapImageToggleEnabled = isTapImageToggleEnabled,
         showFloatingDeleteButton = showFloatingDeleteButton,
         isGestureBallEnabled = isGestureBallEnabled,
@@ -224,6 +226,7 @@ fun MainScreen(
         onDeleteReminderEnabledChange = viewModel::setDeleteReminderEnabled,
         onSwipeGestureSensitivityChange = viewModel::setSwipeGestureSensitivity,
         onShowFullImageChange = viewModel::setShowFullImage,
+        onShowCardActionsButtonChange = viewModel::setShowCardActionsButton,
         onTapImageToggleEnabledChange = viewModel::setTapImageToggleEnabled,
         onShowFloatingDeleteButtonChange = viewModel::setShowFloatingDeleteButton,
         onGestureBallEnabledChange = viewModel::setGestureBallEnabled,

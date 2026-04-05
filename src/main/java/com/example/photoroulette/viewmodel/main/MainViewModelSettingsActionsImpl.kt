@@ -80,6 +80,12 @@ internal fun MainViewModel.setShowFullImageImpl(enabled: Boolean) {
         }
     }
 
+internal fun MainViewModel.setShowCardActionsButtonImpl(enabled: Boolean) {
+        scope.launch(ioDispatcher) {
+            settingsRepository.setShowCardActionsButton(enabled)
+        }
+    }
+
 internal fun MainViewModel.setTapImageToggleEnabledImpl(enabled: Boolean) {
         _isTapImageToggleEnabled.value = enabled
         savedStateHandle[KEY_IS_TAP_IMAGE_TOGGLE_ENABLED] = enabled
