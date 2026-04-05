@@ -1,24 +1,24 @@
 package com.example.photoroulette.ui.screens
 
-import android.graphics.Bitmap
+imimport android.graphics.Bitmap
 import android.graphics.Color as AndroidColor
 import android.net.Uri
 import android.view.HapticFeedbackConstants
 import android.view.SoundEffectConstants
-import androidx.compose.animation.AnimatedVisibility
+imporport androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+pose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compoimport androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androix.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -133,14 +133,12 @@ import com.example.photoroulette.viewmodel.states.HomeUiState
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collectLatest
+impoimport kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-
-@Composable
-fun MainScreen(
-    onRequestPermission: () -> Unit,
-    onOpenSettings: () -> Unit,
-    selectedLanguageTag: String,
+ring,
     onLanguageTagChange: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: MainViewModel = viewModel(),
@@ -414,7 +412,12 @@ private fun MainScreenContent(
 
                         HomeUiState.Empty -> EmptyGalleryScreen()
                         is HomeUiState.Ready -> PhotoDeck(
-                            previousCard = effectiveState.previousCard,
+                            visibleCards = effectiveState.visibleCards,
+                            canSwipePrevious = effectiveState.canSwipeToPrevious,
+                            canSwipeNext = effectiveState.canSwipeToNext,
+                            isSwipeDeleteEnabled = isSwipeDeleteEnabled,
+                            swipeGestureSensitivity = swipeGestureSensitivity,
+                            swipeLe                            previousCard = effectiveState.previousCard,
                             visibleCards = effectiveState.visibleCards,
                             canSwipePrevious = effectiveState.canSwipeToPrevious,
                             canSwipeNext = effectiveState.canSwipeToNext,
@@ -2895,7 +2898,7 @@ private fun PhotoDeck(
             }
 
             if (shouldUsePreviousCardTopCover) {
-                val coverCard = previousCard
+                val coverCard = previousCard!!
                 key("cover-${coverCard.id}") {
                     SwipeableCard(
                         onSwiped = { false },
@@ -2966,8 +2969,7 @@ private fun MediaCardContent(
         -> {
             VideoCardContent(
                 card = card,
-                isTopCard = isTopCard,
-                playerPool = playerPool,
+                isTopCard = isTo                val coverCard = previousCard
                 showFullImage = showFullImage,
                 onGestureLockChanged = onGestureLockChanged,
                 modifier = modifier,
@@ -3605,7 +3607,6 @@ private fun canSwipeForAction(
 
 private const val CARD_ASPECT_RATIO = 0.72f
 private const val BACK_CARD_REVEAL_MULTIPLIER = 0.72f
-private const val TOP_CARD_DOWN_PULL_SCALE_REDUCTION = 0.05f
 private val CARD_LAYER_INSET = 12.dp
 private val MAX_DECK_WIDTH = 460.dp
 private val FLOATING_DELETE_BUTTON_SIZE = 54.dp
@@ -3637,8 +3638,7 @@ private fun MainScreenReadyPreview() {
                     kind = MediaKind.Image,
                     previewUri = Uri.EMPTY,
                 ),
-                visibleCards = listOf(
-                    MediaCard(
+    MediaCard(
                         id = 11L,
                         mimeType = "image/jpeg",
                         kind = MediaKind.Image,
@@ -3659,134 +3659,4 @@ private fun MainScreenReadyPreview() {
                         durationMs = 800L,
                     ),
                 ),
-                canSwipeToPrevious = true,
-                canSwipeToNext = true,
-            ),
-            permissionMode = PermissionHelper.PermissionMode.GRANTED_PARTIAL,
-            isSwipeDeleteEnabled = true,
-            isDeleteReminderEnabled = SettingsRepository.DEFAULT_DELETE_REMINDER_ENABLED,
-            swipeGestureSensitivity = SettingsRepository.DEFAULT_SWIPE_GESTURE_SENSITIVITY,
-            showFullImage = false,
-            isTapImageToggleEnabled = SettingsRepository.DEFAULT_TAP_IMAGE_TOGGLE_ENABLED,
-            showFloatingDeleteButton = true,
-            isGestureBallEnabled = true,
-            gestureBallSizeScale = SettingsRepository.DEFAULT_GESTURE_BALL_SIZE_SCALE,
-            isGestureBallFeedbackEnabled = SettingsRepository.DEFAULT_GESTURE_BALL_FEEDBACK_ENABLED,
-            showGestureBallActionHint = SettingsRepository.DEFAULT_GESTURE_BALL_ACTION_HINT_ENABLED,
-            isSilentDeleteEnabled = true,
-            silentDeleteDcimLabel = "DCIM",
-            silentDeletePicturesLabel = "Pictures",
-            hasDcimDirectoryAuthorized = true,
-            hasPicturesDirectoryAuthorized = true,
-            swipeLeftAction = PREVIEW_DEFAULT_LEFT_ACTION,
-            swipeRightAction = PREVIEW_DEFAULT_RIGHT_ACTION,
-            swipeUpAction = PREVIEW_DEFAULT_UP_ACTION,
-            swipeDownAction = PREVIEW_DEFAULT_DOWN_ACTION,
-            defaultBehaviorNoticeMode = DefaultBehaviorNoticeMode.Visible,
-            shouldShowDefaultBehaviorNotice = true,
-            availableUpdateRelease = null,
-            updateCheckFeedback = UpdateCheckFeedback.Idle,
-            isUpdateInstallInProgress = false,
-            snackbarHostState = previewSnackbarHostState,
-            onRequestPermission = {},
-            onOpenSettings = {},
-            onPermissionRationaleDismissed = {},
-            onRefresh = {},
-            onSwipeDeleteEnabledChange = {},
-            onDeleteReminderEnabledChange = {},
-            onSwipeGestureSensitivityChange = {},
-            onShowFullImageChange = {},
-            onTapImageToggleEnabledChange = {},
-            onShowFloatingDeleteButtonChange = {},
-            onGestureBallEnabledChange = {},
-            onGestureBallSizeScaleChange = {},
-            onGestureBallFeedbackEnabledChange = {},
-            onShowGestureBallActionHintChange = {},
-            onSilentDeleteEnabledChange = {},
-            onConfigureSilentDeleteDcimDirectory = {},
-            onConfigureSilentDeletePicturesDirectory = {},
-            onSwipeLeftActionChange = {},
-            onSwipeRightActionChange = {},
-            onSwipeUpActionChange = {},
-            onSwipeDownActionChange = {},
-            onDefaultBehaviorNoticeEnabledChange = {},
-            selectedLanguageTag = SettingsRepository.SYSTEM_LANGUAGE_TAG,
-            onLanguageTagChange = {},
-            onSwipeAction = { _, _ -> true },
-            onManualUpdateCheck = {},
-            onClearUpdateFeedback = {},
-            onDismissAvailableUpdate = {},
-            onDeferCurrentUpdate = {},
-            onStartUpdateInstallation = {},
-            showPermissionRationale = false,
-        )
-    }
-}
-
-@Preview(showBackground = true, backgroundColor = 0xFFF4F1EA)
-@Composable
-private fun MainScreenPermissionPreview() {
-    MaterialTheme {
-        val previewSnackbarHostState = remember { SnackbarHostState() }
-        MainScreenContent(
-            state = HomeUiState.PermissionDenied,
-            permissionMode = PermissionHelper.PermissionMode.DENIED,
-            isSwipeDeleteEnabled = false,
-            isDeleteReminderEnabled = SettingsRepository.DEFAULT_DELETE_REMINDER_ENABLED,
-            swipeGestureSensitivity = SettingsRepository.DEFAULT_SWIPE_GESTURE_SENSITIVITY,
-            showFullImage = false,
-            isTapImageToggleEnabled = SettingsRepository.DEFAULT_TAP_IMAGE_TOGGLE_ENABLED,
-            showFloatingDeleteButton = false,
-            isGestureBallEnabled = false,
-            gestureBallSizeScale = SettingsRepository.DEFAULT_GESTURE_BALL_SIZE_SCALE,
-            isGestureBallFeedbackEnabled = SettingsRepository.DEFAULT_GESTURE_BALL_FEEDBACK_ENABLED,
-            showGestureBallActionHint = SettingsRepository.DEFAULT_GESTURE_BALL_ACTION_HINT_ENABLED,
-            isSilentDeleteEnabled = false,
-            silentDeleteDcimLabel = null,
-            silentDeletePicturesLabel = null,
-            hasDcimDirectoryAuthorized = false,
-            hasPicturesDirectoryAuthorized = false,
-            swipeLeftAction = PREVIEW_DEFAULT_LEFT_ACTION,
-            swipeRightAction = PREVIEW_DEFAULT_RIGHT_ACTION,
-            swipeUpAction = PREVIEW_DEFAULT_UP_ACTION,
-            swipeDownAction = PREVIEW_DEFAULT_DOWN_ACTION,
-            defaultBehaviorNoticeMode = DefaultBehaviorNoticeMode.Visible,
-            shouldShowDefaultBehaviorNotice = true,
-            availableUpdateRelease = null,
-            updateCheckFeedback = UpdateCheckFeedback.Idle,
-            isUpdateInstallInProgress = false,
-            snackbarHostState = previewSnackbarHostState,
-            onRequestPermission = {},
-            onOpenSettings = {},
-            onPermissionRationaleDismissed = {},
-            onRefresh = {},
-            onSwipeDeleteEnabledChange = {},
-            onDeleteReminderEnabledChange = {},
-            onSwipeGestureSensitivityChange = {},
-            onShowFullImageChange = {},
-            onTapImageToggleEnabledChange = {},
-            onShowFloatingDeleteButtonChange = {},
-            onGestureBallEnabledChange = {},
-            onGestureBallSizeScaleChange = {},
-            onGestureBallFeedbackEnabledChange = {},
-            onShowGestureBallActionHintChange = {},
-            onSilentDeleteEnabledChange = {},
-            onConfigureSilentDeleteDcimDirectory = {},
-            onConfigureSilentDeletePicturesDirectory = {},
-            onSwipeLeftActionChange = {},
-            onSwipeRightActionChange = {},
-            onSwipeUpActionChange = {},
-            onSwipeDownActionChange = {},
-            onDefaultBehaviorNoticeEnabledChange = {},
-            selectedLanguageTag = SettingsRepository.SYSTEM_LANGUAGE_TAG,
-            onLanguageTagChange = {},
-            onSwipeAction = { _, _ -> true },
-            onManualUpdateCheck = {},
-            onClearUpdateFeedback = {},
-            onDismissAvailableUpdate = {},
-            onDeferCurrentUpdate = {},
-            onStartUpdateInstallation = {},
-            showPermissionRationale = true,
-        )
-    }
-}
+private const val TOP_CARD_DOWN_PULL_SCALE_REDUCTION = 0.05f
