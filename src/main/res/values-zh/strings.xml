@@ -107,16 +107,6 @@
     <string name="usage_guide_line_four">4）若偶发卡顿，先点一次“重新打乱”重建卡组，再继续滑动。</string>
     <string name="usage_guide_line_five">5）默认操作说明：一个月内累计出现 5 次后，当月会自动关闭并在下个月自动恢复；若你手动关闭，则下个月也不会自动恢复。</string>
 
-    <string name="settings_usage_title">设置项作用说明</string>
-    <string name="settings_usage_line_display">显示：控制卡片是完整显示原图（可能留白）还是裁剪铺满；可选择是否允许单击顶部图片快速切换显示模式。</string>
-    <string name="settings_usage_line_swipe">手势：可分别配置上/下/左/右四个方向的动作，并通过“滑动灵敏度”调整触发所需距离。</string>
-    <string name="settings_usage_line_gesture_ball">手势悬浮球：开启后可在悬浮球上预览并执行动作；支持调大小、声音反馈与顶部提示文案。</string>
-    <string name="settings_usage_line_delete">删除："启用删除操作"是删除总开关；删除提醒控制是否显示删除提示；悬浮删除按钮用于单独点击删除。</string>
-    <string name="settings_usage_line_silent_delete">静默删除：开启后，已授权目录内的删除可跳过系统确认；建议同时授权 DCIM 与 Pictures 提升覆盖率。</string>
-    <string name="settings_usage_line_default_notice">默认操作说明：控制首页是否展示默认手势说明；自动关闭与手动关闭规则以说明文字为准。</string>
-    <string name="settings_usage_line_language">语言：切换应用界面语言；“系统默认”会跟随手机系统语言变化。</string>
-    <string name="settings_usage_line_update">更新：可手动检查新版本，并在检测到新版本后选择立即更新或稍后提醒。</string>
-
     <string name="default_behavior_visibility_title">显示默认操作说明</string>
     <string name="default_behavior_visibility_visible_description">已开启。首页会显示默认操作说明；同一自然月出现满 5 次后会自动关闭。</string>
     <string name="default_behavior_visibility_auto_hidden_description">本月已出现满 5 次，当前为自动关闭状态。下个月会自动恢复开启。</string>

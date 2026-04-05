@@ -981,7 +981,6 @@ private fun SettingsDialog(
 
                 SettingsSectionTitle(text = stringResource(id = R.string.settings_section_guide))
                 UsageGuideCard()
-                SettingsUsageCard()
                 DefaultBehaviorNoticeControls(
                     mode = defaultBehaviorNoticeMode,
                     onCheckedChange = onDefaultBehaviorNoticeEnabledChange,
@@ -1116,70 +1115,6 @@ private fun UsageGuideCard(
             )
             Text(
                 text = stringResource(id = R.string.usage_guide_line_five),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun SettingsUsageCard(
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = stringResource(id = R.string.settings_usage_title),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = stringResource(id = R.string.settings_usage_line_display),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = stringResource(id = R.string.settings_usage_line_swipe),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = stringResource(id = R.string.settings_usage_line_gesture_ball),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = stringResource(id = R.string.settings_usage_line_delete),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = stringResource(id = R.string.settings_usage_line_silent_delete),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = stringResource(id = R.string.settings_usage_line_default_notice),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = stringResource(id = R.string.settings_usage_line_language),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = stringResource(id = R.string.settings_usage_line_update),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -2792,12 +2727,8 @@ private fun PhotoDeck(
     var isTopCardForceFullImage by remember { mutableStateOf(false) }
     var isTopCardImageGestureLocked by remember { mutableStateOf(false) }
     val topCard = visibleCards.firstOrNull()
-    val shouldUsePreviousCardTopCover =
-        (swipeDownAction == SwipeAction.Previous || swipeUpAction == SwipeAction.Previous) &&
-            previousCard != null
-    val shouldUsePreviousCardRightCover =
-        (swipeRightAction == SwipeAction.Previous || swipeLeftAction == SwipeAction.Previous) &&
-            previousCard != null
+    val shouldUsePreviousCardTopCover = swipeDownAction == SwipeAction.Previous && previousCard != null
+    val shouldUsePreviousCardRightCover = swipeRightAction == SwipeAction.Previous && previousCard != null
     val nextVideoUri = remember(visibleCards) {
         visibleCards
             .drop(1)
@@ -2929,11 +2860,7 @@ private fun PhotoDeck(
                         },
                         isDownSwipeCoverEnabled =
                             isTopCard &&
-                                swipeDownAction == SwipeAction.Previous &&
-                                canSwipePrevious,
-                        isUpSwipeCoverEnabled =
-                            isTopCard &&
-                                swipeUpAction == SwipeAction.Previous &&
+                                shouldUsePreviousCardTopCover &&
                                 canSwipePrevious,
                         onDownSwipeCoverProgressChanged = if (isTopCard) {
                             { topCardDownCoverProgress = it }
@@ -2942,11 +2869,7 @@ private fun PhotoDeck(
                         },
                         isRightSwipeCoverEnabled =
                             isTopCard &&
-                                swipeRightAction == SwipeAction.Previous &&
-                                canSwipePrevious,
-                        isLeftSwipeCoverEnabled =
-                            isTopCard &&
-                                swipeLeftAction == SwipeAction.Previous &&
+                                shouldUsePreviousCardRightCover &&
                                 canSwipePrevious,
                         onRightSwipeCoverProgressChanged = if (isTopCard) {
                             { topCardRightCoverProgress = it }
