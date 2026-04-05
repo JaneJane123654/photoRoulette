@@ -1,26 +1,73 @@
-# Android
-build/
-bin/
-gen/
-out/
-.gradle/
-.idea/
-*.iml
-local.properties
-capture.png
+# Android Build Outputs
+/build/
+/bin/
+/gen/
+/out/
+/captures/
 *.apk
 *.ap_
+*.aab
 *.dex
-*.class
-*.keystore
+
+# Gradle
+/.gradle/
+gradle-app.setting
+gradle-wrapper.jar
+
+# Android IDE (Android Studio, IntelliJ)
+.idea/
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/dictionaries/
+.idea/vcs.xml
+.idea/jsLibraryMappings.xml
+.idea/caches/
+*.iml
 
 # Kotlin
 .kotlin/
 kotlin-daemon-embeddable-*.jar
 
-# System
+# Local environment
+local.properties
+
+# Compiled Java
+*.class
+*.jar
+*.war
+*.ear
+
+# Gradle cache
+.gradle/
+.gradle/buildOutputCleanup/
+.gradle/nb-cache/
+.gradle-user-home/
+
+# Native method stubs
+*.jnilib
+*.so
+
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
 Thumbs.db
+ehthumbs.db
+
+# Linux
+*~
+
+# IDE temp/cache (VS Code, etc.)
+.vscode/
+.settings/
+.classpath
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
 
 # Project specific
 Project Implementation Process AI Memory Document.md
@@ -33,5 +80,14 @@ plan/
 hs_err_pid*.log
 replay_pid*.log
 
-# Sensitive files
+# Sensitive/Security files
+*.keystore
 release.keystore
+*.p12
+*.pem
+*.key
+*.jks
+.ssh/
+
+# Screen captures
+capture.png
