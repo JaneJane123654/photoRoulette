@@ -137,6 +137,7 @@ class MainActivity : AppCompatActivity() {
         setContent {
             val permissionMode by viewModel.permissionMode.collectAsStateWithLifecycle()
             val appLanguageTag by viewModel.appLanguageTag.collectAsStateWithLifecycle()
+            val normalizedLanguageTag = AppLanguageManager.normalizeLanguageTag(appLanguageTag)
             val showPermissionRationale = shouldShowPermissionRationale &&
                 !dismissPermissionRationale &&
                 permissionMode == PermissionHelper.PermissionMode.DENIED
@@ -182,8 +183,8 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                LaunchedEffect(appLanguageTag) {
-                    AppLanguageManager.applyLanguage(appLanguageTag)
+                LaunchedEffect(normalizedLanguageTag) {
+                    AppLanguageManager.applyLanguage(normalizedLanguageTag)
                 }
 
                 LaunchedEffect(permissionMode, showPermissionRationale, hasAttemptedPermissionRequest) {
@@ -200,8 +201,12 @@ class MainActivity : AppCompatActivity() {
                     viewModel = viewModel,
                     onRequestPermission = ::launchPermissionRequest,
                     onOpenSettings = ::openAppSettings,
-                    selectedLanguageTag = appLanguageTag,
-                    onLanguageTagChange = viewModel::setAppLanguageTag,
+                    selectedLanguageTag = normalizedLanguageTag,
+                    onLanguageTagChange = { tag ->
+                        val normalizedTag = AppLanguageManager.normalizeLanguageTag(tag)
+                        AppLanguageManager.applyLanguage(normalizedTag)
+                        viewModel.setAppLanguageTag(normalizedTag)
+                    },
                     showPermissionRationale = showPermissionRationale,
                     onPermissionRationaleDismissed = {
                         dismissPermissionRationale = true

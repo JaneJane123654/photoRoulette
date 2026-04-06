@@ -53,6 +53,10 @@ import com.example.photoroulette.viewmodel.MainViewModel.PendingDeleteEntry
 import com.example.photoroulette.viewmodel.MainViewModel.SystemDeleteRequest
 
 internal fun MainViewModel.initializeStateCollectorsImpl() {
+        scope.launch(ioDispatcher) {
+            settingsRepository.ensureCardActionsButtonDefaultInitialized()
+        }
+
         scope.launch {
             settingsRepository.isSwipeDeleteEnabled.collect { enabled ->
                 _isSwipeDeleteEnabled.value = enabled

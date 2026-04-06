@@ -307,6 +307,14 @@ class SettingsRepository(
         }
     }
 
+    suspend fun ensureCardActionsButtonDefaultInitialized() {
+        appContext.dataStore.edit { preferences ->
+            if (preferences[Keys.ShowCardActionsButton] == null) {
+                preferences[Keys.ShowCardActionsButton] = DEFAULT_CARD_ACTIONS_BUTTON_VISIBLE
+            }
+        }
+    }
+
     suspend fun setTapImageToggleEnabled(enabled: Boolean) {
         appContext.dataStore.edit { preferences ->
             preferences[Keys.EnableTapImageToggle] = enabled

@@ -25,6 +25,7 @@ import com.example.photoroulette.model.DefaultBehaviorNoticeMode
 import com.example.photoroulette.model.SilentDeleteScope
 import com.example.photoroulette.model.SwipeAction
 import com.example.photoroulette.model.UpdateCheckFeedback
+import com.example.photoroulette.utils.AppLanguageManager
 import com.example.photoroulette.utils.IntentHelper
 import com.example.photoroulette.utils.PermissionHelper
 import com.example.photoroulette.utils.VersionNameUtils
@@ -280,8 +281,9 @@ internal fun MainViewModel.saveSilentDeleteTreeUrisImpl(treeUris: List<String>) 
     }
 
 internal fun MainViewModel.setAppLanguageTagImpl(tag: String) {
+        val normalizedTag = AppLanguageManager.normalizeLanguageTag(tag)
         scope.launch(ioDispatcher) {
-            settingsRepository.setAppLanguageTag(tag)
+            settingsRepository.setAppLanguageTag(normalizedTag)
         }
     }
 
