@@ -6,6 +6,8 @@
 
 照片轮盘是一款轻量的 Android 相册随机浏览应用，主打单手手势快速筛图。
 
+安卓安装包下载：https://github.com/JaneJane123654/photoRoulette/releases
+
 ### 适用场景
 
 - 碎片时间快速清理截图。
@@ -39,6 +41,8 @@
 ## English
 
 Photo Roulette is a lightweight Android app for quickly browsing your gallery with one-hand gestures.
+
+APK Download:https://github.com/JaneJane123654/photoRoulette/releases
 
 ### Best Use Cases
 
