@@ -71,3 +71,14 @@ APK Download:https://github.com/JaneJane123654/photoRoulette/releases
 - All photo operations happen on-device.
 - No cloud upload.
 - Access scope follows Android permission system.
+
+---
+
+## 截图展示 / Screenshots
+
+![照片轮盘截图1](程序运行图片/微信图片_20260512161347_170_141.jpg)
+![照片轮盘截图2](程序运行图片/微信图片_20260512161346_169_141.jpg)
+![照片轮盘截图3](程序运行图片/微信图片_20260512161344_168_141.jpg)
+![照片轮盘截图4](程序运行图片/微信图片_20260512161342_167_141.jpg)
+![照片轮盘截图5](程序运行图片/微信图片_20260512161339_166_141.jpg)
+![照片轮盘截图6](程序运行图片/微信图片_20260512161337_165_141.jpg)

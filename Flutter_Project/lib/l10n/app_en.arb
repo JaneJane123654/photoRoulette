@@ -1,0 +1,120 @@
+{
+  "@@locale": "en",
+  "appTitle": "Photo Roulette",
+  "@appTitle": {
+    "description": "Application title from the native app_name string."
+  },
+  "startupReadyMessage": "Bootstrap shell ready",
+  "@startupReadyMessage": {
+    "description": "Temporary startup placeholder shown before feature pages are migrated."
+  },
+  "homeHeaderTitle": "Photo Roulette",
+  "@homeHeaderTitle": {
+    "description": "Main header title from home_header_title."
+  },
+  "homeHeaderDescription": "Randomly browse your gallery with one-handed gestures. Open Settings below to customize behavior.",
+  "@homeHeaderDescription": {
+    "description": "Main header description from home_header_description."
+  },
+  "loading": "Building your next random deck...",
+  "@loading": {
+    "description": "Shared loading message seeded from loading_deck."
+  },
+  "emptyStateTitle": "You're all caught up!",
+  "@emptyStateTitle": {
+    "description": "Generic empty gallery/deck title."
+  },
+  "emptyStateMessage": "There are no photos left to browse right now. Take a few new shots and come back for another round.",
+  "@emptyStateMessage": {
+    "description": "Generic empty gallery/deck message."
+  },
+  "permissionRequestAction": "Continue",
+  "@permissionRequestAction": {
+    "description": "Primary action that starts the photo permission request."
+  },
+  "permissionMaybeLaterAction": "Maybe Later",
+  "@permissionMaybeLaterAction": {
+    "description": "Secondary action that dismisses the permission rationale."
+  },
+  "permissionOpenSettingsAction": "Open Settings",
+  "@permissionOpenSettingsAction": {
+    "description": "Action that opens system settings for permission recovery."
+  },
+  "permissionDeniedTitle": "Photo access is turned off",
+  "@permissionDeniedTitle": {
+    "description": "Permission denied state title."
+  },
+  "permissionDeniedMessage": "Photo Roulette needs access to your photo library so it can build the shuffle deck. Open system settings to allow photo access for this app.",
+  "@permissionDeniedMessage": {
+    "description": "Permission denied state body."
+  },
+  "permissionSettingsOpenFailedMessage": "Unable to open settings.",
+  "@permissionSettingsOpenFailedMessage": {
+    "description": "Shown when system app settings cannot be opened."
+  },
+  "permissionRationaleTitle": "Shuffle your gallery on your terms",
+  "@permissionRationaleTitle": {
+    "description": "Permission rationale title from permission_rationale_title."
+  },
+  "permissionRationaleDescriptionPrimary": "Photo Roulette needs photo access to build a random deck from your library. On Android 14, you can allow all photos for the broadest shuffle, or share only selected photos and albums if that feels better.",
+  "@permissionRationaleDescriptionPrimary": {
+    "description": "Primary permission rationale copy."
+  },
+  "permissionRationaleDescriptionSecondary": "Whatever you choose is valid. The app only shuffles and shows the photos Android lets it see, and nothing leaves your device.",
+  "@permissionRationaleDescriptionSecondary": {
+    "description": "Secondary permission rationale copy."
+  },
+  "permissionFeatureAllPhotosIconDescription": "Shuffle all photos option",
+  "permissionFeatureAllPhotosTitle": "Best random mix with full access",
+  "permissionFeatureAllPhotosBody": "Giving access to all photos unlocks the widest range of surprises across your whole library.",
+  "permissionFeatureSelectedIconDescription": "Selected photos and albums option",
+  "permissionFeatureSelectedTitle": "Selected photos still work",
+  "permissionFeatureSelectedBody": "Prefer a smaller set? Android 14 can limit access to only the photos or albums you choose, and Photo Roulette will stay inside that boundary.",
+  "permissionFeatureControlIconDescription": "Permission control reminder",
+  "permissionFeatureControlTitle": "You stay in control",
+  "permissionFeatureControlBody": "You can revisit the permission choice later in system settings if you want to broaden or narrow what the app can shuffle.",
+  "permissionIllustrationCollectionDescription": "A photo collection card in the permission illustration",
+  "permissionIllustrationShuffleDescription": "A shuffle card in the permission illustration",
+  "permissionIllustrationLibraryDescription": "A highlighted photo access card in the permission illustration",
+  "partialAccessTitle": "Browsing a selected subset",
+  "partialAccessDescription": "Only the photos Android currently shares are in this deck. Expand access if you want a wider shuffle.",
+  "partialAccessExpand": "Expand",
+  "galleryPlaceholderPartialAccess": "Selected photo access granted",
+  "galleryPlaceholderFullAccess": "Full photo access granted",
+  "galleryPlaceholderMessage": "Permission gate passed. The real gallery deck will replace this temporary shell in the deck migration step.",
+  "refreshButtonContentDescription": "Reshuffle your photo deck",
+  "refreshButtonLabel": "Reshuffle",
+  "partialAccessIconContentDescription": "Partial photo access enabled",
+  "swipeActionSkip": "Skip / no action",
+  "swipeActionPrevious": "Previous photo",
+  "swipeActionNext": "Next photo",
+  "photoContentDescription": "Photo from your library",
+  "photoLoadErrorTitle": "This photo couldn't be loaded.",
+  "photoLoadingTitle": "Loading photo...",
+  "photoLoadErrorDescription": "You can keep swiping and the deck will move on to the next image.",
+  "photoLoadingDescription": "Coil is fetching a down-sampled version to keep swiping smooth and memory-safe.",
+  "settingsLabel": "Settings",
+  "@settingsLabel": {
+    "description": "Shared settings label."
+  },
+  "retryAction": "Retry",
+  "@retryAction": {
+    "description": "Shared retry action label."
+  },
+  "cancelAction": "Cancel",
+  "@cancelAction": {
+    "description": "Shared cancel action label."
+  },
+  "confirmAction": "Confirm",
+  "@confirmAction": {
+    "description": "Shared confirm action label."
+  },
+  "updateAvailableTitle": "New version available",
+  "@updateAvailableTitle": {
+    "description": "Update available dialog title from update_dialog_title."
+  },
+  "deleteFailedMessage": "Unable to delete photo. Please try again.",
+  "@deleteFailedMessage": {
+    "description": "Shared delete failure message for later delete flows."
+  }
+}
